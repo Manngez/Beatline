@@ -28,9 +28,16 @@ type NetworkMessage =
 
 const CATEGORIES: SongCategory[] = ["mixed", "pop", "swedish", "rap", "rock"];
 
-function makeRoomCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+function normalizeRoomCode(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function roomPeerId(code: string) {
+  const bytes = new TextEncoder().encode(normalizeRoomCode(code).toLocaleLowerCase("sv-SE"));
+  let binary = "";
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  const encoded = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return `beatline-${encoded}`;
 }
 
 function makePlayerId() {
@@ -39,7 +46,7 @@ function makePlayerId() {
 }
 
 function playerStorageKey(code: string) {
-  return `beatline-player-${code.toUpperCase()}`;
+  return `beatline-player-${roomPeerId(code)}`;
 }
 
 function getStoredPlayerId(code: string) {
@@ -172,10 +179,11 @@ export default function App() {
   }, [closeGuestTransport, playerId, reset, role]);
 
   const createRoom = useCallback(() => {
+    const code = normalizeRoomCode(roomCode);
     if (!playerName.trim()) { setOnlineError("Skriv ditt spelarnamn först."); return; }
+    if (!code) { setOnlineError("Skriv en rumskod först."); return; }
     disconnectOnline();
-    const code = makeRoomCode();
-    const peer = new Peer(`beatline-${code.toLowerCase()}`);
+    const peer = new Peer(roomPeerId(code));
     peerRef.current = peer;
     setRole("host"); setStatus("connecting"); setRoomCode(code); setPlayerId("host");
     const hostPlayer = [{ id: "host", name: playerName.trim(), ready: true, isHost: true }];
@@ -184,9 +192,12 @@ export default function App() {
     peer.on("connection", attachHostConnection);
     peer.on("error", (error) => {
       if (peerRef.current !== peer) return;
-      setStatus("error"); setOnlineError(error.message || "Kunde inte skapa rummet.");
+      const message = error.type === "unavailable-id"
+        ? "Den rumskoden används redan. Välj en annan."
+        : error.message || "Kunde inte skapa rummet.";
+      setStatus("error"); setOnlineError(message);
     });
-  }, [attachHostConnection, disconnectOnline, playerName]);
+  }, [attachHostConnection, disconnectOnline, playerName, roomCode]);
 
   const connectGuest = useCallback((code: string, id: string) => {
     closeGuestTransport();
@@ -195,7 +206,7 @@ export default function App() {
     peerRef.current = peer;
     peer.on("open", () => {
       if (peerRef.current !== peer) return;
-      const connection = peer.connect(`beatline-${code.toLowerCase()}`, { reliable: true });
+      const connection = peer.connect(roomPeerId(code), { reliable: true });
       hostConnectionRef.current = connection;
       connection.on("open", () => {
         if (hostConnectionRef.current !== connection) return;
@@ -215,7 +226,7 @@ export default function App() {
       });
       connection.on("error", () => {
         if (hostConnectionRef.current !== connection) return;
-        setStatus("error"); setOnlineError("Kunde inte ansluta till rummet. Försök återansluta.");
+        setStatus("error"); setOnlineError("Kunde inte ansluta till rummet. Kontrollera rumskoden.");
       });
     });
     peer.on("error", (error) => {
@@ -225,16 +236,16 @@ export default function App() {
   }, [closeGuestTransport, playerName, setRemoteState]);
 
   const joinRoom = useCallback(() => {
-    const code = joinCode.trim().toUpperCase();
+    const code = normalizeRoomCode(joinCode);
     if (!playerName.trim()) { setOnlineError("Skriv ditt spelarnamn först."); return; }
-    if (code.length !== 6) { setOnlineError("Rumskoden ska bestå av 6 tecken."); return; }
+    if (!code) { setOnlineError("Skriv rumskoden först."); return; }
     const id = getStoredPlayerId(code);
     connectGuest(code, id);
   }, [connectGuest, joinCode, playerName]);
 
   const reconnectRoom = useCallback(() => {
-    const code = joinCode.trim().toUpperCase();
-    if (role !== "guest" || code.length !== 6) return;
+    const code = normalizeRoomCode(joinCode);
+    if (role !== "guest" || !code) return;
     connectGuest(code, playerId || getStoredPlayerId(code));
   }, [connectGuest, joinCode, playerId, role]);
 
@@ -275,10 +286,13 @@ export default function App() {
       {role === "offline" ? (
         <div className="space-y-2">
           <input value={playerName} onChange={(e) => setPlayerName(e.target.value.slice(0, 16))} placeholder="Ditt spelarnamn" className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none" />
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button onClick={createRoom} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-4 py-3 font-bold text-white">Skapa onlinerum</button>
-            <div className="flex flex-1 gap-2">
-              <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} placeholder="RUMSKOD" className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono tracking-[0.2em] text-white outline-none" />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="flex gap-2">
+              <input value={roomCode} onChange={(e) => setRoomCode(e.target.value.slice(0, 40))} placeholder="Välj valfri rumskod" className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none" />
+              <button onClick={createRoom} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-4 py-3 font-bold text-white">Skapa</button>
+            </div>
+            <div className="flex gap-2">
+              <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.slice(0, 40))} placeholder="Skriv rumskoden" className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none" />
               <button onClick={joinRoom} className="rounded-xl bg-white/10 px-4 py-3 font-bold text-white">Gå med</button>
             </div>
           </div>
