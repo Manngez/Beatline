@@ -20,7 +20,8 @@ type RemoteAction =
 type NetworkMessage =
   | { type: "STATE"; state: GameState }
   | { type: "ACTION"; action: RemoteAction; playerId: string }
-  | { type: "JOIN"; name: string }
+  | { type: "JOIN"; name: string; playerId: string }
+  | { type: "LEAVE"; playerId: string }
   | { type: "IDENTITY"; playerId: string }
   | { type: "READY"; ready: boolean }
   | { type: "LOBBY"; players: LobbyPlayer[] };
@@ -30,6 +31,27 @@ const CATEGORIES: SongCategory[] = ["mixed", "pop", "swedish", "rap", "rock"];
 function makeRoomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+function makePlayerId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `guest-${crypto.randomUUID()}`;
+  return `guest-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function playerStorageKey(code: string) {
+  return `beatline-player-${code.toUpperCase()}`;
+}
+
+function getStoredPlayerId(code: string) {
+  try {
+    const stored = localStorage.getItem(playerStorageKey(code));
+    if (stored) return stored;
+    const created = makePlayerId();
+    localStorage.setItem(playerStorageKey(code), created);
+    return created;
+  } catch {
+    return makePlayerId();
+  }
 }
 
 export default function App() {
@@ -97,10 +119,22 @@ export default function App() {
     connection.on("data", (raw) => {
       const message = raw as NetworkMessage;
       if (message.type === "JOIN") {
-        const id = `guest-${connection.peer}`;
+        const id = message.playerId || `guest-${connection.peer}`;
         connectionPlayerIdsRef.current.set(connection, id);
         connection.send({ type: "IDENTITY", playerId: id } satisfies NetworkMessage);
-        updateLobby((players) => [...players.filter((p) => p.id !== id), { id, name: message.name.trim() || "Spelare", ready: false, isHost: false }].slice(0, 6));
+        updateLobby((players) => {
+          const existing = players.find((player) => player.id === id);
+          if (existing) {
+            return players.map((player) => player.id === id
+              ? { ...player, name: message.name.trim() || player.name }
+              : player);
+          }
+          return [...players, { id, name: message.name.trim() || "Spelare", ready: false, isHost: false }].slice(0, 6);
+        });
+        connection.send({ type: "STATE", state: stateRef.current } satisfies NetworkMessage);
+      }
+      if (message.type === "LEAVE") {
+        updateLobby((players) => players.filter((player) => player.id !== message.playerId));
       }
       if (message.type === "READY") {
         const id = connectionPlayerIdsRef.current.get(connection);
@@ -108,27 +142,32 @@ export default function App() {
       }
       if (message.type === "ACTION") applyRemoteAction(message.action, message.playerId);
     });
-    const removeGuest = () => {
-      const id = connectionPlayerIdsRef.current.get(connection);
+    const detachGuest = () => {
       guestConnectionsRef.current = guestConnectionsRef.current.filter((item) => item !== connection);
       connectionPlayerIdsRef.current.delete(connection);
-      if (id) updateLobby((players) => players.filter((p) => p.id !== id));
     };
-    connection.on("close", removeGuest);
-    connection.on("error", removeGuest);
+    connection.on("close", detachGuest);
+    connection.on("error", detachGuest);
   }, [applyRemoteAction, updateLobby]);
 
-  const disconnectOnline = useCallback(() => {
-    guestConnectionsRef.current.forEach((connection) => connection.close());
-    guestConnectionsRef.current = [];
-    connectionPlayerIdsRef.current.clear();
+  const closeGuestTransport = useCallback(() => {
     hostConnectionRef.current?.close();
     hostConnectionRef.current = null;
     peerRef.current?.destroy();
     peerRef.current = null;
+  }, []);
+
+  const disconnectOnline = useCallback(() => {
+    if (role === "guest" && playerId && hostConnectionRef.current?.open) {
+      hostConnectionRef.current.send({ type: "LEAVE", playerId } satisfies NetworkMessage);
+    }
+    guestConnectionsRef.current.forEach((connection) => connection.close());
+    guestConnectionsRef.current = [];
+    connectionPlayerIdsRef.current.clear();
+    closeGuestTransport();
     setRole("offline"); setStatus("idle"); setRoomCode(""); setJoinCode("");
     setLobbyPlayers([]); setPlayerId(""); setOnlineError(""); reset();
-  }, [reset]);
+  }, [closeGuestTransport, playerId, reset, role]);
 
   const createRoom = useCallback(() => {
     if (!playerName.trim()) { setOnlineError("Skriv ditt spelarnamn först."); return; }
@@ -139,24 +178,28 @@ export default function App() {
     setRole("host"); setStatus("connecting"); setRoomCode(code); setPlayerId("host");
     const hostPlayer = [{ id: "host", name: playerName.trim(), ready: true, isHost: true }];
     setLobbyPlayers(hostPlayer); lobbyRef.current = hostPlayer;
-    peer.on("open", () => setStatus("connected"));
+    peer.on("open", () => { if (peerRef.current === peer) setStatus("connected"); });
     peer.on("connection", attachHostConnection);
-    peer.on("error", (error) => { setStatus("error"); setOnlineError(error.message || "Kunde inte skapa rummet."); });
+    peer.on("error", (error) => {
+      if (peerRef.current !== peer) return;
+      setStatus("error"); setOnlineError(error.message || "Kunde inte skapa rummet.");
+    });
   }, [attachHostConnection, disconnectOnline, playerName]);
 
-  const joinRoom = useCallback(() => {
-    const code = joinCode.trim().toUpperCase();
-    if (!playerName.trim()) { setOnlineError("Skriv ditt spelarnamn först."); return; }
-    if (code.length !== 6) { setOnlineError("Rumskoden ska bestå av 6 tecken."); return; }
-    disconnectOnline();
-    setJoinCode(code); setRole("guest"); setStatus("connecting"); setOnlineError("");
-    const peer = new Peer(); peerRef.current = peer;
+  const connectGuest = useCallback((code: string, id: string) => {
+    closeGuestTransport();
+    setRole("guest"); setStatus("connecting"); setOnlineError(""); setJoinCode(code); setPlayerId(id);
+    const peer = new Peer();
+    peerRef.current = peer;
     peer.on("open", () => {
+      if (peerRef.current !== peer) return;
       const connection = peer.connect(`beatline-${code.toLowerCase()}`, { reliable: true });
       hostConnectionRef.current = connection;
       connection.on("open", () => {
+        if (hostConnectionRef.current !== connection) return;
         setStatus("connected");
-        connection.send({ type: "JOIN", name: playerName.trim() } satisfies NetworkMessage);
+        setOnlineError("");
+        connection.send({ type: "JOIN", name: playerName.trim(), playerId: id } satisfies NetworkMessage);
       });
       connection.on("data", (raw) => {
         const message = raw as NetworkMessage;
@@ -164,11 +207,34 @@ export default function App() {
         if (message.type === "IDENTITY") setPlayerId(message.playerId);
         if (message.type === "LOBBY") setLobbyPlayers(message.players);
       });
-      connection.on("close", () => { setStatus("error"); setOnlineError("Anslutningen till värden bröts."); });
-      connection.on("error", () => { setStatus("error"); setOnlineError("Kunde inte ansluta till rummet."); });
+      connection.on("close", () => {
+        if (hostConnectionRef.current !== connection) return;
+        setStatus("error"); setOnlineError("Anslutningen till värden bröts. Du kan återansluta till samma rum.");
+      });
+      connection.on("error", () => {
+        if (hostConnectionRef.current !== connection) return;
+        setStatus("error"); setOnlineError("Kunde inte ansluta till rummet. Försök återansluta.");
+      });
     });
-    peer.on("error", (error) => { setStatus("error"); setOnlineError(error.message || "Kunde inte ansluta."); });
-  }, [disconnectOnline, joinCode, playerName, setRemoteState]);
+    peer.on("error", (error) => {
+      if (peerRef.current !== peer) return;
+      setStatus("error"); setOnlineError(error.message || "Kunde inte ansluta. Försök återansluta.");
+    });
+  }, [closeGuestTransport, playerName, setRemoteState]);
+
+  const joinRoom = useCallback(() => {
+    const code = joinCode.trim().toUpperCase();
+    if (!playerName.trim()) { setOnlineError("Skriv ditt spelarnamn först."); return; }
+    if (code.length !== 6) { setOnlineError("Rumskoden ska bestå av 6 tecken."); return; }
+    const id = getStoredPlayerId(code);
+    connectGuest(code, id);
+  }, [connectGuest, joinCode, playerName]);
+
+  const reconnectRoom = useCallback(() => {
+    const code = joinCode.trim().toUpperCase();
+    if (role !== "guest" || code.length !== 6) return;
+    connectGuest(code, playerId || getStoredPlayerId(code));
+  }, [connectGuest, joinCode, playerId, role]);
 
   useEffect(() => {
     if (role !== "host" || status !== "connected") return;
@@ -218,7 +284,10 @@ export default function App() {
       ) : (
         <div className="flex items-center justify-between gap-3">
           <div><div className="text-xs font-bold uppercase tracking-widest text-white/45">{role === "host" ? "Värd" : "Spelare"}</div><div className="font-bold">{status === "connected" ? `Rum ${role === "host" ? roomCode : joinCode} · ${lobbyPlayers.length} spelare` : status === "connecting" ? "Ansluter…" : onlineError}</div></div>
-          <button onClick={disconnectOnline} className="rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold text-white/70">Lämna</button>
+          <div className="flex gap-2">
+            {role === "guest" && status === "error" && <button onClick={reconnectRoom} className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white">Återanslut</button>}
+            <button onClick={disconnectOnline} className="rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold text-white/70">Lämna</button>
+          </div>
         </div>
       )}
       {onlineError && <p className="mt-2 text-sm text-red-300">{onlineError}</p>}
