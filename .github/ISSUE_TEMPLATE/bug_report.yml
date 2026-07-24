@@ -1,8 +1,6 @@
 name: Rapportera en bugg
 description: Hjälp oss hitta och rätta fel i BeatLine
 title: "[Bugg] "
-labels:
-  - bug
 body:
   - type: markdown
     attributes:
