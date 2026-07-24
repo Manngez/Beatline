@@ -151,10 +151,12 @@ export default function App() {
   }, [applyRemoteAction, updateLobby]);
 
   const closeGuestTransport = useCallback(() => {
-    hostConnectionRef.current?.close();
+    const connection = hostConnectionRef.current;
     hostConnectionRef.current = null;
-    peerRef.current?.destroy();
+    connection?.close();
+    const peer = peerRef.current;
     peerRef.current = null;
+    peer?.destroy();
   }, []);
 
   const disconnectOnline = useCallback(() => {
