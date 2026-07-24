@@ -1,0 +1,63 @@
+name: Rapportera en bugg
+description: Hjälp oss hitta och rätta fel i BeatLine
+title: "[Bugg] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tack för att du hjälper till att förbättra BeatLine. Beskriv felet så tydligt du kan.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vad hände?
+      description: Beskriv vad som gick fel.
+      placeholder: Jag tryckte på ... och då ...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Så kan felet återskapas
+      description: Skriv stegen i rätt ordning.
+      placeholder: |
+        1. Skapa ett onlinerum
+        2. Anslut en andra spelare
+        3. Tryck på ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Vad borde ha hänt?
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Spelläge
+      options:
+        - Onlinespel som värd
+        - Onlinespel som gäst
+        - Lokalt spel
+        - Vet inte
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Enhet och webbläsare
+      placeholder: Exempel: Samsung Galaxy S21, Chrome
+  - type: textarea
+    id: extra
+    attributes:
+      label: Skärmbild eller annan information
+      description: Dra gärna in en skärmbild eller skärminspelning här.
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Kontroll
+      options:
+        - label: Jag har laddat om sidan och felet finns kvar.
+          required: false
