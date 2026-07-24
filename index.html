@@ -27,13 +27,12 @@
   </head>
   <body>
     <div id="root"></div>
-    <a id="beatline-bug-report" href="https://github.com/Manngez/Beatline/issues/new?template=bug_report.yml" target="_blank" rel="noreferrer">🐞 Rapportera bugg</a>
+    <a id="beatline-bug-report" href="https://github.com/Manngez/Beatline/issues/new" target="_blank" rel="noreferrer">🐞 Rapportera bugg</a>
     <script>
       (() => {
         const button = document.getElementById('beatline-bug-report');
         if (!button) return;
         const params = new URLSearchParams({
-          template: 'bug_report.yml',
           title: '[Bugg] ',
           labels: 'bug',
           body: [
