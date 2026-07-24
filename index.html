@@ -5,9 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#05050a" />
     <title>BeatLine – Musikspelet</title>
+    <style>
+      #beatline-bug-report {
+        position: fixed;
+        right: 14px;
+        bottom: 14px;
+        z-index: 9999;
+        border: 1px solid rgba(255,255,255,.18);
+        border-radius: 999px;
+        background: rgba(10,10,18,.88);
+        color: white;
+        padding: 10px 14px;
+        font: 600 13px system-ui, sans-serif;
+        text-decoration: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        backdrop-filter: blur(12px);
+      }
+      #beatline-bug-report:hover { background: rgba(35,25,55,.96); }
+      #beatline-bug-report:focus-visible { outline: 3px solid #a78bfa; outline-offset: 3px; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <a id="beatline-bug-report" href="https://github.com/Manngez/Beatline/issues/new?template=bug_report.yml" target="_blank" rel="noreferrer">🐞 Rapportera bugg</a>
+    <script>
+      (() => {
+        const button = document.getElementById('beatline-bug-report');
+        if (!button) return;
+        const params = new URLSearchParams({
+          template: 'bug_report.yml',
+          title: '[Bugg] ',
+          labels: 'bug',
+          body: [
+            '## Vad hände?',
+            '',
+            'Beskriv felet här.',
+            '',
+            '## Så kan felet återskapas',
+            '1. ',
+            '2. ',
+            '3. ',
+            '',
+            '## Vad borde ha hänt?',
+            '',
+            '',
+            '## Teknisk information',
+            `- Sida: ${location.href}`,
+            `- Enhet/webbläsare: ${navigator.userAgent}`,
+            `- Skärm: ${screen.width}×${screen.height}`,
+            `- Tid: ${new Date().toISOString()}`,
+            '',
+            'Lägg gärna till en skärmbild eller skärminspelning.'
+          ].join('\n')
+        });
+        button.href = `https://github.com/Manngez/Beatline/issues/new?${params.toString()}`;
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
