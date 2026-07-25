@@ -7,6 +7,7 @@ import { type AudioTarget } from "./components/SongQrCard";
 import { useGame } from "./hooks/useGame";
 import { CATEGORY_META, type GameState, type SongCategory } from "./types";
 
+type PlayMode = "chooser" | "local" | "online";
 type OnlineRole = "offline" | "host" | "guest";
 type OnlineStatus = "idle" | "connecting" | "connected" | "error";
 type LobbyPlayer = { id: string; name: string; ready: boolean; isHost: boolean };
@@ -60,6 +61,7 @@ function getStoredPlayerId(code: string) {
 
 export default function App() {
   const { state, startGame, placeCard, continueRound, bankAndEnd, skipSong, redrawAudioFail, setRemoteState, reset } = useGame();
+  const [playMode, setPlayMode] = useState<PlayMode>("chooser");
   const [audioTarget, setAudioTarget] = useState<AudioTarget>("both");
   const [role, setRole] = useState<OnlineRole>("offline");
   const [status, setStatus] = useState<OnlineStatus>("idle");
@@ -185,13 +187,20 @@ export default function App() {
     });
   }, [attachHostConnection, closeHostTransport]);
 
-  const disconnectOnline = useCallback(() => {
+  const leaveOnline = useCallback(() => {
     manualDisconnectRef.current = true;
     if (role === "guest" && playerId && hostConnectionRef.current?.open) hostConnectionRef.current.send({ type: "LEAVE", playerId } satisfies NetworkMessage);
     closeHostTransport();
     closeGuestTransport();
-    setRole("offline"); setStatus("idle"); setRoomCode(""); setJoinCode("");
-    setLobbyPlayers([]); setPlayerId(""); setOnlineError(""); reset();
+    setRole("offline");
+    setStatus("idle");
+    setRoomCode("");
+    setJoinCode("");
+    setLobbyPlayers([]);
+    setPlayerId("");
+    setOnlineError("");
+    setPlayMode("chooser");
+    reset();
     window.setTimeout(() => { manualDisconnectRef.current = false; }, 0);
   }, [closeGuestTransport, closeHostTransport, playerId, reset, role]);
 
@@ -199,16 +208,28 @@ export default function App() {
     const code = normalizeRoomCode(roomCode);
     if (!playerName.trim()) { setOnlineError("Skriv ditt namn först."); return; }
     if (!code) { setOnlineError("Skriv en rumskod först."); return; }
-    disconnectOnline();
-    setRole("host"); setRoomCode(code); setPlayerId("host"); setOnlineError("");
+    closeHostTransport();
+    closeGuestTransport();
+    reset();
+    setPlayMode("online");
+    setRole("host");
+    setRoomCode(code);
+    setPlayerId("host");
+    setOnlineError("");
     const hostPlayer = [{ id: "host", name: playerName.trim(), ready: true, isHost: true }];
-    setLobbyPlayers(hostPlayer); lobbyRef.current = hostPlayer;
+    setLobbyPlayers(hostPlayer);
+    lobbyRef.current = hostPlayer;
     window.setTimeout(() => openHostTransport(code), 0);
-  }, [disconnectOnline, openHostTransport, playerName, roomCode]);
+  }, [closeGuestTransport, closeHostTransport, openHostTransport, playerName, reset, roomCode]);
 
   const connectGuest = useCallback((code: string, id: string) => {
     closeGuestTransport();
-    setRole("guest"); setStatus("connecting"); setOnlineError(""); setJoinCode(code); setPlayerId(id);
+    setPlayMode("online");
+    setRole("guest");
+    setStatus("connecting");
+    setOnlineError("");
+    setJoinCode(code);
+    setPlayerId(id);
     const peer = new Peer();
     peerRef.current = peer;
     peer.on("open", () => {
@@ -217,7 +238,8 @@ export default function App() {
       hostConnectionRef.current = connection;
       connection.on("open", () => {
         if (hostConnectionRef.current !== connection) return;
-        setStatus("connected"); setOnlineError("");
+        setStatus("connected");
+        setOnlineError("");
         connection.send({ type: "JOIN", name: playerName.trim(), playerId: id } satisfies NetworkMessage);
       });
       connection.on("data", (raw) => {
@@ -307,64 +329,91 @@ export default function App() {
 
   const statusLabel = status === "connected" ? "Ansluten" : status === "connecting" ? "Återansluter…" : "Frånkopplad";
   const statusDot = status === "connected" ? "bg-emerald-400" : status === "connecting" ? "bg-amber-400 animate-pulse" : "bg-rose-500";
+  const onlineLobby = role !== "offline" && state.phase === "setup" && status === "connected";
+  const showConnectionBar = playMode === "online" && role !== "offline" && state.phase !== "setup";
 
-  const onlinePanel = (
-    <div className="fixed left-1/2 top-3 z-50 w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 rounded-2xl border border-white/15 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
-      {role === "offline" ? (
-        <div className="space-y-3">
-          <input value={playerName} onChange={(event) => setPlayerName(event.target.value.slice(0, 16))} placeholder="Ditt namn" className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none" />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3">
-              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-200">Spelledare</div>
-              <input value={roomCode} onChange={(event) => setRoomCode(event.target.value.slice(0, 40))} placeholder="Välj valfri rumskod" className="mb-2 w-full rounded-xl border border-white/15 bg-black/25 px-3 py-3 text-white outline-none" />
-              <button onClick={createRoom} className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-4 py-3 font-bold">Skapa rum</button>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/50">Deltagare</div>
-              <input value={joinCode} onChange={(event) => setJoinCode(event.target.value.slice(0, 40))} placeholder="Skriv rumskoden" className="mb-2 w-full rounded-xl border border-white/15 bg-black/25 px-3 py-3 text-white outline-none" />
-              <button onClick={joinRoom} className="w-full rounded-xl bg-white/10 px-4 py-3 font-bold">Gå med</button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-xs font-bold uppercase tracking-widest text-white/45">{role === "host" ? "Spelledare" : "Deltagare"}</div>
-              <div className="truncate font-bold">{role === "host" ? roomCode : joinCode} · {lobbyPlayers.length} spelare</div>
-              <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-white/65"><span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />{statusLabel}</div>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <button onClick={reconnectRoom} disabled={status === "connecting"} className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold shadow-lg shadow-violet-600/20 disabled:cursor-wait disabled:opacity-60">{status === "connecting" ? "Återansluter…" : "Återanslut"}</button>
-              <button onClick={disconnectOnline} className="rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold text-white/70">Lämna</button>
-            </div>
-          </div>
-          {onlineError && status === "error" && <p className="mt-2 text-sm text-red-300">{onlineError}</p>}
-        </div>
-      )}
-    </div>
+  const chooseMode = (
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-4 py-12">
+      <div className="text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.28em] text-violet-300">BeatLine</p>
+        <h1 className="brand-text mt-3 text-5xl font-black sm:text-6xl">Hur vill ni spela?</h1>
+        <p className="mx-auto mt-4 max-w-lg text-white/55">Välj först hur många enheter som ska användas. Du kan alltid gå tillbaka och byta.</p>
+      </div>
+      <div className="mt-10 grid gap-4 md:grid-cols-2">
+        <button onClick={() => setPlayMode("local")} className="group rounded-[2rem] border border-white/10 bg-white/5 p-7 text-left transition hover:border-violet-400/40 hover:bg-violet-500/10">
+          <div className="text-5xl">📱</div>
+          <h2 className="mt-5 text-2xl font-black">Lokalt på en enhet</h2>
+          <p className="mt-2 text-white/55">Alla spelar tillsammans på samma mobil, surfplatta eller dator.</p>
+          <div className="mt-6 font-bold text-violet-300">Fortsätt lokalt →</div>
+        </button>
+        <button onClick={() => setPlayMode("online")} className="group rounded-[2rem] border border-white/10 bg-white/5 p-7 text-left transition hover:border-fuchsia-400/40 hover:bg-fuchsia-500/10">
+          <div className="text-5xl">📲</div>
+          <h2 className="mt-5 text-2xl font-black">Flera enheter</h2>
+          <p className="mt-2 text-white/55">En spelledare skapar ett rum och deltagarna går med från sina mobiler.</p>
+          <div className="mt-6 font-bold text-fuchsia-300">Skapa eller gå med →</div>
+        </button>
+      </div>
+    </main>
   );
 
-  const onlineLobby = role !== "offline" && state.phase === "setup" && status === "connected";
+  const onlineEntry = (
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-4 py-12">
+      <button onClick={() => { setPlayMode("chooser"); setOnlineError(""); }} className="mb-5 self-start text-sm font-semibold text-white/55 hover:text-white">← Tillbaka</button>
+      <div className="glass-panel rounded-[2rem] p-5 sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.24em] text-violet-300">Flera enheter</p>
+        <h1 className="mt-2 text-3xl font-black">Skapa eller gå med i ett rum</h1>
+        <input value={playerName} onChange={(event) => setPlayerName(event.target.value.slice(0, 16))} placeholder="Ditt namn" className="mt-6 w-full rounded-xl border border-white/15 bg-black/25 px-4 py-3 text-white outline-none" />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4">
+            <div className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-200">Spelledare</div>
+            <input value={roomCode} onChange={(event) => setRoomCode(event.target.value.slice(0, 40))} placeholder="Välj rumskod" className="mb-3 w-full rounded-xl border border-white/15 bg-black/25 px-3 py-3 text-white outline-none" />
+            <button onClick={createRoom} className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-4 py-3 font-bold">Skapa rum</button>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-2 text-xs font-bold uppercase tracking-wider text-white/50">Deltagare</div>
+            <input value={joinCode} onChange={(event) => setJoinCode(event.target.value.slice(0, 40))} placeholder="Skriv rumskoden" className="mb-3 w-full rounded-xl border border-white/15 bg-black/25 px-3 py-3 text-white outline-none" />
+            <button onClick={joinRoom} className="w-full rounded-xl bg-white/10 px-4 py-3 font-bold">Gå med</button>
+          </div>
+        </div>
+        {onlineError && <p className="mt-4 text-sm text-red-300">{onlineError}</p>}
+      </div>
+    </main>
+  );
+
+  const connectionBar = showConnectionBar ? (
+    <div className="fixed left-1/2 top-3 z-50 flex w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-white/15 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-bold">Rum: {role === "host" ? roomCode : joinCode}</div>
+        <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-white/65"><span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />{statusLabel}</div>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <button onClick={reconnectRoom} disabled={status === "connecting"} className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold disabled:cursor-wait disabled:opacity-60">{status === "connecting" ? "Återansluter…" : "Återanslut"}</button>
+        <button onClick={leaveOnline} className="rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold text-white/70">Lämna</button>
+      </div>
+    </div>
+  ) : null;
 
   return (
-    <div className="min-h-screen bg-[#05050a] pt-24 text-white">
-      {onlinePanel}
+    <div className={`min-h-screen bg-[#05050a] text-white ${showConnectionBar ? "pt-20" : ""}`}>
+      {connectionBar}
       <div className="pointer-events-none fixed inset-0 overflow-hidden"><div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(91,33,182,0.35),_transparent_55%)]" /><div className="absolute -right-28 top-1/4 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/20 blur-[120px]" /></div>
       <div className="relative z-10">
-        {onlineLobby ? (
+        {playMode === "chooser" ? chooseMode : playMode === "local" ? (
+          state.phase === "setup" ? <><button onClick={() => setPlayMode("chooser")} className="fixed left-4 top-4 z-40 rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-sm text-white/70">← Spelsätt</button><SetupScreen onStart={startGame} /></> : <GameBoard state={state} onPlace={placeCard} onContinue={continueRound} onBank={bankAndEnd} onSkip={skipSong} onRedrawAudioFail={redrawAudioFail} onReset={reset} audioTarget={audioTarget} onAudioTargetChange={setAudioTarget} />
+        ) : role === "offline" ? onlineEntry : onlineLobby ? (
           <div className="mx-auto max-w-xl px-4 py-8">
+            <div className="mb-4 flex items-center justify-between"><button onClick={leaveOnline} className="text-sm font-semibold text-white/55 hover:text-white">← Lämna rummet</button><div className="flex items-center gap-2 text-xs font-semibold text-white/65"><span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />{statusLabel}</div></div>
             <div className="glass-panel rounded-[1.75rem] p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-violet-300">{role === "host" ? "Spelledarvy" : "Deltagarvy"}</p>
               <h1 className="mt-1 text-3xl font-black">{role === "host" ? "Förbered matchen" : "Du är med i lobbyn"}</h1>
-              <p className="mt-2 text-white/55">{role === "host" ? "Du styr kategori, ljud och matchstart. Deltagarna får en förenklad mobilvy." : "Markera dig som redo. Spelledaren sköter resten."}</p>
+              <p className="mt-2 text-white/55">Rum: <strong>{role === "host" ? roomCode : joinCode}</strong></p>
               <div className="mt-6 space-y-2">{lobbyPlayers.map((player, index) => <div key={player.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4"><div><span className="font-bold">{index + 1}. {player.name}</span>{player.isHost && <span className="ml-2 text-xs text-violet-300">SPELLEDARE</span>}</div><span className={player.ready ? "text-emerald-300" : "text-amber-300"}>{player.ready ? "✓ Redo" : "Väntar"}</span></div>)}</div>
               {role === "guest" && <button onClick={toggleReady} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-4 font-black">{me?.ready ? "Jag är inte redo" : "Jag är redo"}</button>}
               {role === "host" && <div className="mt-6 space-y-4"><div><label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/45">Kategori</label><select value={category} onChange={(event) => setCategory(event.target.value as SongCategory)} className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3">{CATEGORIES.map((key) => <option key={key} value={key}>{CATEGORY_META[key].label}</option>)}</select></div><label className="flex items-center gap-3"><input type="checkbox" checked={useTokens} onChange={(event) => setUseTokens(event.target.checked)} /> Använd tokens</label><button onClick={() => allReady && startGame(lobbyPlayers.map((player) => player.name), useTokens, category)} disabled={!allReady} className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-4 font-black disabled:opacity-35">{lobbyPlayers.length < 2 ? "Väntar på deltagare" : !allReady ? "Väntar tills alla är redo" : "Starta matchen"}</button></div>}
             </div>
           </div>
         ) : state.phase === "setup" ? (
-          role === "offline" ? <SetupScreen onStart={startGame} /> : <div className="mx-auto py-20 text-center text-white/60">{status === "error" ? "Frånkopplad – tryck på Återanslut ovan." : "Ansluter till lobbyn…"}</div>
+          <div className="mx-auto py-20 text-center text-white/60">{status === "error" ? <><p>Frånkopplad.</p><button onClick={reconnectRoom} className="mt-4 rounded-xl bg-violet-600 px-5 py-3 font-bold text-white">Återanslut</button></> : "Ansluter till lobbyn…"}</div>
         ) : role === "guest" ? (
           <ParticipantBoard state={state} isMyTurn={isMyTurn} myPlayerIndex={myPlayerIndex} onPlace={(slotIndex) => sendOrRun({ type: "PLACE_CARD", slotIndex }, () => placeCard(slotIndex))} onContinue={() => sendOrRun({ type: "CONTINUE_ROUND" }, continueRound)} onBank={() => sendOrRun({ type: "BANK_AND_END" }, bankAndEnd)} onSkip={() => sendOrRun({ type: "SKIP_SONG" }, skipSong)} />
         ) : (
