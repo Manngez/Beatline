@@ -1,6 +1,23 @@
 /** Lightweight Web Audio synth sounds – no external assets needed */
 
 let audioCtx: AudioContext | null = null;
+const FEEDBACK_SETTING_KEY = "beatline-result-feedback";
+
+export function isResultFeedbackEnabled(): boolean {
+  try {
+    return localStorage.getItem(FEEDBACK_SETTING_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function setResultFeedbackEnabled(enabled: boolean) {
+  try {
+    localStorage.setItem(FEEDBACK_SETTING_KEY, enabled ? "on" : "off");
+  } catch {
+    // Storage can be unavailable in private browsing.
+  }
+}
 
 function getCtx(): AudioContext {
   if (!audioCtx) {
@@ -33,26 +50,35 @@ function tone(
   osc.stop(start + duration + 0.02);
 }
 
+function vibrate(pattern: number | number[]) {
+  try {
+    if ("vibrate" in navigator) navigator.vibrate(pattern);
+  } catch {
+    // Vibration is optional and unsupported on some devices.
+  }
+}
+
 /** Bright ascending chime for a correct placement */
 export function playSuccessSound() {
+  if (!isResultFeedbackEnabled()) return;
   try {
     const ctx = getCtx();
     const t = ctx.currentTime;
-    // Sparkle arpeggio
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    const notes = [523.25, 659.25, 783.99, 1046.5];
     notes.forEach((f, i) => {
       tone(f, t + i * 0.08, 0.28, "triangle", 0.14);
       tone(f * 2, t + i * 0.08, 0.18, "sine", 0.04);
     });
-    // Soft shimmer pad
     tone(1318.5, t + 0.35, 0.45, "sine", 0.06);
   } catch {
-    // ignore autoplay restrictions
+    // Ignore autoplay restrictions.
   }
+  vibrate([45, 35, 70]);
 }
 
 /** Soft negative thud for wrong answer */
 export function playWrongSound() {
+  if (!isResultFeedbackEnabled()) return;
   try {
     const ctx = getCtx();
     const t = ctx.currentTime;
@@ -60,8 +86,9 @@ export function playWrongSound() {
     tone(120, t + 0.08, 0.35, "triangle", 0.1);
     tone(90, t + 0.18, 0.4, "sine", 0.08);
   } catch {
-    // ignore
+    // Ignore autoplay restrictions.
   }
+  vibrate([180, 80, 180]);
 }
 
 /** Short click for UI */
@@ -71,7 +98,7 @@ export function playClickSound() {
     const t = ctx.currentTime;
     tone(880, t, 0.05, "square", 0.04);
   } catch {
-    // ignore
+    // Ignore autoplay restrictions.
   }
 }
 
@@ -85,7 +112,7 @@ export function playBankSound() {
       tone(f, t + i * 0.1, 0.35, "triangle", 0.12);
     });
   } catch {
-    // ignore
+    // Ignore autoplay restrictions.
   }
 }
 
@@ -99,6 +126,6 @@ export function playWinSound() {
       tone(f / 2, t + i * 0.12, 0.35, "sine", 0.05);
     });
   } catch {
-    // ignore
+    // Ignore autoplay restrictions.
   }
 }
