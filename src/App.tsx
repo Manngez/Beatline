@@ -78,6 +78,7 @@ export default function App() {
   const connectionPlayerIdsRef = useRef(new Map<DataConnection, string>());
   const stateRef = useRef(state);
   const lobbyRef = useRef(lobbyPlayers);
+  const manualDisconnectRef = useRef(false);
   stateRef.current = state;
   lobbyRef.current = lobbyPlayers;
 
@@ -156,34 +157,54 @@ export default function App() {
     peer?.destroy();
   }, []);
 
-  const disconnectOnline = useCallback(() => {
-    if (role === "guest" && playerId && hostConnectionRef.current?.open) hostConnectionRef.current.send({ type: "LEAVE", playerId } satisfies NetworkMessage);
+  const closeHostTransport = useCallback(() => {
     guestConnectionsRef.current.forEach((connection) => connection.close());
     guestConnectionsRef.current = [];
     connectionPlayerIdsRef.current.clear();
+    const peer = peerRef.current;
+    peerRef.current = null;
+    peer?.destroy();
+  }, []);
+
+  const openHostTransport = useCallback((code: string) => {
+    closeHostTransport();
+    setStatus("connecting");
+    setOnlineError("");
+    const peer = new Peer(roomPeerId(code));
+    peerRef.current = peer;
+    peer.on("open", () => {
+      if (peerRef.current !== peer) return;
+      setStatus("connected");
+      setOnlineError("");
+    });
+    peer.on("connection", attachHostConnection);
+    peer.on("error", (error) => {
+      if (peerRef.current !== peer) return;
+      setStatus("error");
+      setOnlineError(error.type === "unavailable-id" ? "Rumskoden används fortfarande. Försök igen om en stund." : error.message || "Kunde inte återansluta rummet.");
+    });
+  }, [attachHostConnection, closeHostTransport]);
+
+  const disconnectOnline = useCallback(() => {
+    manualDisconnectRef.current = true;
+    if (role === "guest" && playerId && hostConnectionRef.current?.open) hostConnectionRef.current.send({ type: "LEAVE", playerId } satisfies NetworkMessage);
+    closeHostTransport();
     closeGuestTransport();
     setRole("offline"); setStatus("idle"); setRoomCode(""); setJoinCode("");
     setLobbyPlayers([]); setPlayerId(""); setOnlineError(""); reset();
-  }, [closeGuestTransport, playerId, reset, role]);
+    window.setTimeout(() => { manualDisconnectRef.current = false; }, 0);
+  }, [closeGuestTransport, closeHostTransport, playerId, reset, role]);
 
   const createRoom = useCallback(() => {
     const code = normalizeRoomCode(roomCode);
     if (!playerName.trim()) { setOnlineError("Skriv ditt namn först."); return; }
     if (!code) { setOnlineError("Skriv en rumskod först."); return; }
     disconnectOnline();
-    const peer = new Peer(roomPeerId(code));
-    peerRef.current = peer;
-    setRole("host"); setStatus("connecting"); setRoomCode(code); setPlayerId("host"); setOnlineError("");
+    setRole("host"); setRoomCode(code); setPlayerId("host"); setOnlineError("");
     const hostPlayer = [{ id: "host", name: playerName.trim(), ready: true, isHost: true }];
     setLobbyPlayers(hostPlayer); lobbyRef.current = hostPlayer;
-    peer.on("open", () => peerRef.current === peer && setStatus("connected"));
-    peer.on("connection", attachHostConnection);
-    peer.on("error", (error) => {
-      if (peerRef.current !== peer) return;
-      setStatus("error");
-      setOnlineError(error.type === "unavailable-id" ? "Den rumskoden används redan." : error.message || "Kunde inte skapa rummet.");
-    });
-  }, [attachHostConnection, disconnectOnline, playerName, roomCode]);
+    window.setTimeout(() => openHostTransport(code), 0);
+  }, [disconnectOnline, openHostTransport, playerName, roomCode]);
 
   const connectGuest = useCallback((code: string, id: string) => {
     closeGuestTransport();
@@ -206,14 +227,23 @@ export default function App() {
         if (message.type === "LOBBY") setLobbyPlayers(message.players);
       });
       connection.on("close", () => {
-        if (hostConnectionRef.current === connection) { setStatus("error"); setOnlineError("Anslutningen bröts. Återanslut till samma rum."); }
+        if (hostConnectionRef.current === connection && !manualDisconnectRef.current) {
+          setStatus("error");
+          setOnlineError("Anslutningen bröts. Tryck på Återanslut.");
+        }
       });
       connection.on("error", () => {
-        if (hostConnectionRef.current === connection) { setStatus("error"); setOnlineError("Kunde inte ansluta. Kontrollera rumskoden."); }
+        if (hostConnectionRef.current === connection && !manualDisconnectRef.current) {
+          setStatus("error");
+          setOnlineError("Kunde inte ansluta. Tryck på Återanslut.");
+        }
       });
     });
     peer.on("error", (error) => {
-      if (peerRef.current === peer) { setStatus("error"); setOnlineError(error.message || "Kunde inte ansluta."); }
+      if (peerRef.current === peer && !manualDisconnectRef.current) {
+        setStatus("error");
+        setOnlineError(error.message || "Kunde inte ansluta. Tryck på Återanslut.");
+      }
     });
   }, [closeGuestTransport, playerName, setRemoteState]);
 
@@ -225,15 +255,35 @@ export default function App() {
   }, [connectGuest, joinCode, playerName]);
 
   const reconnectRoom = useCallback(() => {
-    const code = normalizeRoomCode(joinCode);
-    if (role === "guest" && code) connectGuest(code, playerId || getStoredPlayerId(code));
-  }, [connectGuest, joinCode, playerId, role]);
+    if (status === "connecting") return;
+    if (role === "host") {
+      const code = normalizeRoomCode(roomCode);
+      if (code) openHostTransport(code);
+      return;
+    }
+    if (role === "guest") {
+      const code = normalizeRoomCode(joinCode);
+      if (code) connectGuest(code, playerId || getStoredPlayerId(code));
+    }
+  }, [connectGuest, joinCode, openHostTransport, playerId, role, roomCode, status]);
 
   useEffect(() => {
     if (role !== "host" || status !== "connected") return;
     const message: NetworkMessage = { type: "STATE", state };
     guestConnectionsRef.current.forEach((connection) => connection.open && connection.send(message));
   }, [role, state, status]);
+
+  useEffect(() => {
+    const tryReconnect = () => {
+      if (document.visibilityState === "visible" && role === "guest" && status !== "connected" && !manualDisconnectRef.current) reconnectRoom();
+    };
+    document.addEventListener("visibilitychange", tryReconnect);
+    window.addEventListener("online", tryReconnect);
+    return () => {
+      document.removeEventListener("visibilitychange", tryReconnect);
+      window.removeEventListener("online", tryReconnect);
+    };
+  }, [reconnectRoom, role, status]);
 
   useEffect(() => () => peerRef.current?.destroy(), []);
 
@@ -255,6 +305,9 @@ export default function App() {
     hostConnectionRef.current?.send({ type: "READY", ready } satisfies NetworkMessage);
   };
 
+  const statusLabel = status === "connected" ? "Ansluten" : status === "connecting" ? "Återansluter…" : "Frånkopplad";
+  const statusDot = status === "connected" ? "bg-emerald-400" : status === "connecting" ? "bg-amber-400 animate-pulse" : "bg-rose-500";
+
   const onlinePanel = (
     <div className="fixed left-1/2 top-3 z-50 w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 rounded-2xl border border-white/15 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
       {role === "offline" ? (
@@ -274,18 +327,21 @@ export default function App() {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-white/45">{role === "host" ? "Spelledare" : "Deltagare"}</div>
-            <div className="font-bold">{status === "connected" ? `${role === "host" ? roomCode : joinCode} · ${lobbyPlayers.length} spelare` : status === "connecting" ? "Ansluter…" : onlineError}</div>
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs font-bold uppercase tracking-widest text-white/45">{role === "host" ? "Spelledare" : "Deltagare"}</div>
+              <div className="truncate font-bold">{role === "host" ? roomCode : joinCode} · {lobbyPlayers.length} spelare</div>
+              <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-white/65"><span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />{statusLabel}</div>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button onClick={reconnectRoom} disabled={status === "connecting"} className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold shadow-lg shadow-violet-600/20 disabled:cursor-wait disabled:opacity-60">{status === "connecting" ? "Återansluter…" : "Återanslut"}</button>
+              <button onClick={disconnectOnline} className="rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold text-white/70">Lämna</button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            {role === "guest" && status === "error" && <button onClick={reconnectRoom} className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold">Återanslut</button>}
-            <button onClick={disconnectOnline} className="rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold text-white/70">Lämna</button>
-          </div>
+          {onlineError && status === "error" && <p className="mt-2 text-sm text-red-300">{onlineError}</p>}
         </div>
       )}
-      {onlineError && <p className="mt-2 text-sm text-red-300">{onlineError}</p>}
     </div>
   );
 
@@ -308,7 +364,7 @@ export default function App() {
             </div>
           </div>
         ) : state.phase === "setup" ? (
-          role === "offline" ? <SetupScreen onStart={startGame} /> : <div className="mx-auto py-20 text-center text-white/60">Ansluter till lobbyn…</div>
+          role === "offline" ? <SetupScreen onStart={startGame} /> : <div className="mx-auto py-20 text-center text-white/60">{status === "error" ? "Frånkopplad – tryck på Återanslut ovan." : "Ansluter till lobbyn…"}</div>
         ) : role === "guest" ? (
           <ParticipantBoard state={state} isMyTurn={isMyTurn} myPlayerIndex={myPlayerIndex} onPlace={(slotIndex) => sendOrRun({ type: "PLACE_CARD", slotIndex }, () => placeCard(slotIndex))} onContinue={() => sendOrRun({ type: "CONTINUE_ROUND" }, continueRound)} onBank={() => sendOrRun({ type: "BANK_AND_END" }, bankAndEnd)} onSkip={() => sendOrRun({ type: "SKIP_SONG" }, skipSong)} />
         ) : (
