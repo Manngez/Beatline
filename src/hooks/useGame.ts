@@ -106,8 +106,19 @@ function startPlayerTurn(players: Player[], playerIndex: number, deck: Song[], u
 
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
-    case "SET_REMOTE_STATE":
-      return action.state;
+    case "SET_REMOTE_STATE": {
+      const incoming = action.state;
+      const isNewResult =
+        incoming.phase === "result" &&
+        (state.phase !== "result" || state.revealedSong?.id !== incoming.revealedSong?.id);
+
+      if (isNewResult) {
+        if (incoming.lastResult === "correct") playSuccessSound();
+        if (incoming.lastResult === "wrong") playWrongSound();
+      }
+
+      return incoming;
+    }
     case "START_GAME": {
       const deck = shuffleDeck(getSongsForCategory(action.category));
       const players: Player[] = action.names.map((name, i) => ({
