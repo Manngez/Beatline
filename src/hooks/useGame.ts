@@ -17,8 +17,10 @@ import {
   playWrongSound,
 } from "../utils/sounds";
 
-type Action =
-  | { type: "START_GAME"; names: string[]; useTokens: boolean; category: SongCategory }
+export type GamePlayerInput = { id: string; name: string };
+
+export type GameAction =
+  | { type: "START_GAME"; players: GamePlayerInput[]; useTokens: boolean; category: SongCategory }
   | { type: "PLACE_CARD"; slotIndex: number }
   | { type: "CONTINUE_ROUND" }
   | { type: "BANK_AND_END" }
@@ -27,7 +29,8 @@ type Action =
   | { type: "SET_REMOTE_STATE"; state: GameState }
   | { type: "RESET" };
 
-function isValidPlacement(timeline: Song[], song: Song, slotIndex: number): boolean {
+export function isValidPlacement(timeline: Song[], song: Song, slotIndex: number): boolean {
+  if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex > timeline.length) return false;
   const left = slotIndex > 0 ? timeline[slotIndex - 1] : null;
   const right = slotIndex < timeline.length ? timeline[slotIndex] : null;
   if (left && song.year < left.year) return false;
@@ -39,7 +42,7 @@ function insertAt(timeline: Song[], song: Song, slotIndex: number): Song[] {
   return [...timeline.slice(0, slotIndex), song, ...timeline.slice(slotIndex)];
 }
 
-function getInitialState(): GameState {
+export function getInitialState(): GameState {
   return {
     phase: "setup",
     players: [],
@@ -104,7 +107,7 @@ function startPlayerTurn(players: Player[], playerIndex: number, deck: Song[], u
   };
 }
 
-function reducer(state: GameState, action: Action): GameState {
+export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "SET_REMOTE_STATE": {
       const incoming = action.state;
@@ -121,9 +124,10 @@ function reducer(state: GameState, action: Action): GameState {
     }
     case "START_GAME": {
       const deck = shuffleDeck(getSongsForCategory(action.category));
-      const players: Player[] = action.names.map((name, i) => ({
-        id: `p${i}`,
-        name: name.trim() || `Spelare ${i + 1}`,
+      if (action.players.length === 0 || deck.length < action.players.length + 1) return state;
+      const players: Player[] = action.players.map((input, i) => ({
+        id: input.id,
+        name: input.name.trim() || `Spelare ${i + 1}`,
         color: PLAYER_COLORS[i % PLAYER_COLORS.length],
         timeline: [deck.shift()!],
         tokens: action.useTokens ? STARTING_TOKENS : 0,
@@ -136,6 +140,7 @@ function reducer(state: GameState, action: Action): GameState {
     }
     case "PLACE_CARD": {
       if (state.phase !== "listening" || !state.currentSong) return state;
+      if (!Number.isInteger(action.slotIndex) || action.slotIndex < 0 || action.slotIndex > state.workingTimeline.length) return state;
       const song = state.currentSong;
       const correct = isValidPlacement(state.workingTimeline, song, action.slotIndex);
       if (correct) {
@@ -179,7 +184,7 @@ function reducer(state: GameState, action: Action): GameState {
     }
     case "SKIP_SONG": {
       const player = state.players[state.currentPlayerIndex];
-      if (!state.useTokens || player.tokens < 1 || state.phase !== "listening") return state;
+      if (!player || !state.useTokens || player.tokens < 1 || state.phase !== "listening") return state;
       if (state.deck.length === 0) return { ...state, message: "Inga fler kort att byta till!" };
       const players = state.players.map((p, i) => i === state.currentPlayerIndex ? { ...p, tokens: p.tokens - 1 } : p);
       const drawn = drawSong(state.deck);
@@ -200,8 +205,8 @@ function reducer(state: GameState, action: Action): GameState {
 }
 
 export function useGame() {
-  const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
-  const startGame = useCallback((names: string[], useTokens: boolean, category: SongCategory) => dispatch({ type: "START_GAME", names, useTokens, category }), []);
+  const [state, dispatch] = useReducer(gameReducer, undefined, getInitialState);
+  const startGame = useCallback((names: string[], useTokens: boolean, category: SongCategory, ids?: string[]) => dispatch({ type: "START_GAME", players: names.map((name, index) => ({ id: ids?.[index] ?? `p${index}`, name })), useTokens, category }), []);
   const placeCard = useCallback((slotIndex: number) => dispatch({ type: "PLACE_CARD", slotIndex }), []);
   const continueRound = useCallback(() => dispatch({ type: "CONTINUE_ROUND" }), []);
   const bankAndEnd = useCallback(() => dispatch({ type: "BANK_AND_END" }), []);
