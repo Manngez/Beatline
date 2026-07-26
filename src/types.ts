@@ -1,4 +1,6 @@
 export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock";
+export type GameContentMode = "music" | "history";
+export type HistoryCategory = "all" | "world" | "sweden" | "science" | "culture" | "sport" | "society";
 
 export interface Song {
   id: string;
@@ -7,6 +9,10 @@ export interface Song {
   year: number;
   decade: string;
   category: Exclude<SongCategory, "mixed">;
+  contentType?: GameContentMode;
+  summary?: string;
+  historyCategory?: Exclude<HistoryCategory, "all">;
+  icon?: string;
 }
 
 export interface Player {
@@ -37,6 +43,8 @@ export interface GameState {
   workingTimeline: Song[];
   useTokens: boolean;
   category: SongCategory;
+  contentMode: GameContentMode;
+  historyCategory: HistoryCategory;
   winnerId: string | null;
   message: string;
   lastResult: "correct" | "wrong" | null;
@@ -64,7 +72,7 @@ export const CATEGORY_META: Record<
   mixed: {
     label: "Blandat",
     emoji: "🎲",
-    description: "Alla genrer och årtionden i en stor blandning",
+    description: "Alla musikgenrer och årtionden i en stor blandning",
     color: "#e879f9",
   },
   pop: {
@@ -91,4 +99,17 @@ export const CATEGORY_META: Record<
     description: "Rock, metal och alternativ från alla tider",
     color: "#a3e635",
   },
+};
+
+export const HISTORY_CATEGORY_META: Record<
+  HistoryCategory,
+  { label: string; emoji: string; description: string; color: string }
+> = {
+  all: { label: "Blandad historia", emoji: "🌍", description: "Världshändelser, Sverige, vetenskap, kultur och sport", color: "#f59e0b" },
+  world: { label: "Världen", emoji: "🏛️", description: "Politik, konflikter, ekonomi och internationella händelser", color: "#ef4444" },
+  sweden: { label: "Sverige", emoji: "🇸🇪", description: "Viktiga svenska händelser från 1900 och framåt", color: "#38bdf8" },
+  science: { label: "Vetenskap & teknik", emoji: "🚀", description: "Upptäckter, medicin, rymdfart och tekniska genombrott", color: "#8b5cf6" },
+  culture: { label: "Kultur", emoji: "🎬", description: "Film, medier, konst och populärkultur", color: "#ec4899" },
+  sport: { label: "Sport", emoji: "🏅", description: "Minnesvärda tävlingar och idrottsögonblick", color: "#22c55e" },
+  society: { label: "Samhälle", emoji: "✊", description: "Rättigheter, miljö, katastrofer och samhällsförändringar", color: "#14b8a6" },
 };
