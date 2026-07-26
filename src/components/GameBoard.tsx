@@ -80,7 +80,7 @@ export function GameBoard({ state, onPlace, onContinue, onBank, onSkip, onRedraw
 
     <div className="relative mb-6 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/[0.07] px-4 py-3 text-center text-sm font-bold text-white/80 shadow-[0_0_22px_rgba(217,70,239,0.10)]">{state.message}</div>
 
-    <div className="relative grid items-start gap-6 lg:grid-cols-[360px_1fr]">
+    <div className="relative grid min-w-0 items-start gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
       <section className="flex flex-col items-center gap-4 rounded-[1.8rem] border border-white/10 bg-black/20 p-4 backdrop-blur-xl">
         {isHistory ? <>{isListening && state.currentSong && <HistoryPromptCard event={state.currentSong} />}{isResult && state.revealedSong && <><RevealedCard song={state.revealedSong} result={state.lastResult} /><HistoryExplanation event={state.revealedSong} /></>}</> : <><div>{isResult && state.revealedSong ? <RevealedCard song={state.revealedSong} result={state.lastResult} /> : <MysteryCard />}</div><SongQrCard song={state.currentSong} active={isListening} audioTarget={audioTarget} onAudioTargetChange={onAudioTargetChange} />{(playLocal || audioStatus === "error") && <MusicPlayer song={state.currentSong} autoPlay={false} active={isListening} playLocal={playLocal} onPlaybackStatus={setAudioStatus} onRequestNewCard={() => { setSelectedSlot(null); onRedrawAudioFail(); }} canRequestNewCard={state.deck.length > 0} showExternalLinks={audioTarget === "local"} />}</>}
 
@@ -91,9 +91,9 @@ export function GameBoard({ state, onPlace, onContinue, onBank, onSkip, onRedraw
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="min-w-0 space-y-4">
         {currentPlayer && <Timeline player={currentPlayer} cards={state.workingTimeline} isActive interactive={isListening} selectedSlot={selectedSlot} onSelectSlot={setSelectedSlot} highlightIds={state.roundCards.map((card) => card.id)} showYears label={pot > 0 ? `${currentPlayer.timeline.length} bankade + ${pot} i potten` : "Placera kortet mellan rätt årtal"} />}
-        {state.players.filter((player) => player.id !== currentPlayer?.id).length > 0 && <div className="grid gap-3 md:grid-cols-2">{state.players.filter((player) => player.id !== currentPlayer?.id).map((player) => <Timeline key={player.id} player={player} showYears />)}</div>}
+        {state.players.filter((player) => player.id !== currentPlayer?.id).length > 0 && <div className="grid min-w-0 gap-3 md:grid-cols-2">{state.players.filter((player) => player.id !== currentPlayer?.id).map((player) => <Timeline key={player.id} player={player} showYears />)}</div>}
       </section>
     </div>
   </main>;
