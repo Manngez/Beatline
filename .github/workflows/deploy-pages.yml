@@ -55,4 +55,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-# Deployment trigger: 2026-07-26 updated navigation
+# Deployment trigger: 2026-07-26 neon icon update
