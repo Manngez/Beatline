@@ -1,1 +1,1 @@
-Trigger GitHub Pages deployment for Beatline timeline scrolling fix.
+Trigger GitHub Pages deployment for expanded Beatline history data.
