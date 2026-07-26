@@ -1,5 +1,6 @@
 import { useCallback, useReducer } from "react";
 import { getHistoryEvents } from "../data/history";
+import { buildUniqueYearHistoryDeck } from "../data/historyDeck";
 import { getSongsForCategory, shuffleDeck } from "../data/songs";
 import {
   CARDS_TO_WIN,
@@ -131,7 +132,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case "START_GAME": {
       const source = action.contentMode === "history" ? getHistoryEvents(action.historyCategory) : getSongsForCategory(action.category);
-      const deck = shuffleDeck(source);
+      const deck = action.contentMode === "history" ? buildUniqueYearHistoryDeck(source) : shuffleDeck(source);
       if (action.players.length === 0 || deck.length < action.players.length + 1) return state;
       const players: Player[] = action.players.map((input, index) => ({
         id: input.id,

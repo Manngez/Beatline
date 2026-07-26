@@ -1,4 +1,7 @@
 import type { HistoryCategory, Song } from "../types";
+import { HISTORY_1900_ADDITIONS } from "./history/1900";
+import { HISTORY_1901_ADDITIONS } from "./history/1901";
+import { HISTORY_ADDITIONAL_EVENTS } from "./history/additions";
 
 type HistoryTopic = Exclude<HistoryCategory, "all">;
 type RawEvent = [number, string, string, HistoryTopic, string];
@@ -156,7 +159,7 @@ const topicLabel: Record<HistoryTopic, string> = {
   society: "Samhälle",
 };
 
-export const HISTORY_EVENTS: Song[] = RAW_HISTORY.map(([year, title, summary, historyCategory, icon], index) => ({
+const BASE_HISTORY_EVENTS: Song[] = RAW_HISTORY.map(([year, title, summary, historyCategory, icon], index) => ({
   id: `history-${year}-${index}`,
   title,
   artist: topicLabel[historyCategory],
@@ -168,6 +171,13 @@ export const HISTORY_EVENTS: Song[] = RAW_HISTORY.map(([year, title, summary, hi
   historyCategory,
   icon,
 }));
+
+export const HISTORY_EVENTS: Song[] = [
+  ...BASE_HISTORY_EVENTS,
+  ...HISTORY_1900_ADDITIONS,
+  ...HISTORY_1901_ADDITIONS,
+  ...HISTORY_ADDITIONAL_EVENTS,
+];
 
 export function getHistoryEvents(category: HistoryCategory): Song[] {
   if (category === "all") return [...HISTORY_EVENTS];

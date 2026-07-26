@@ -28,7 +28,7 @@ type NetworkMessage =
   | { type: "LOBBY"; players: LobbyPlayer[] };
 
 const MUSIC_CATEGORIES: SongCategory[] = ["mixed", "pop", "swedish", "rap", "rock"];
-const HISTORY_CATEGORIES: HistoryCategory[] = ["all", "world", "science", "society"];
+const HISTORY_CATEGORIES: HistoryCategory[] = ["all", "world", "sweden", "science", "culture", "sport", "society"];
 const ACTION_TYPES = new Set(["CONTINUE_ROUND", "BANK_AND_END", "SKIP_SONG", "REDRAW_AUDIO_FAIL", "RESET"]);
 
 function normalizeRoomCode(value: string) { return value.trim().replace(/\s+/g, " "); }
