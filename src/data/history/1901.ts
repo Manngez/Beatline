@@ -1,0 +1,40 @@
+import type { Song } from "../../types";
+
+export const HISTORY_1901_ADDITIONS: Song[] = [
+  {
+    id: "history-1901-australia-federation",
+    title: "Australien blir en federation",
+    artist: "Världshistoria",
+    year: 1901,
+    decade: "1900-talet",
+    category: "pop",
+    contentType: "history",
+    summary: "Sex brittiska kolonier förenas den 1 januari och bildar Samväldet Australien med ett gemensamt federalt parlament.",
+    historyCategory: "world",
+    icon: "🇦🇺",
+  },
+  {
+    id: "history-1901-marconi-transatlantic-radio",
+    title: "Den första transatlantiska radiosignalen tas emot",
+    artist: "Vetenskap & teknik",
+    year: 1901,
+    decade: "1900-talet",
+    category: "pop",
+    contentType: "history",
+    summary: "Guglielmo Marconi tar emot morsesignalen för bokstaven S i Newfoundland, sänd från Cornwall på andra sidan Atlanten.",
+    historyCategory: "science",
+    icon: "📡",
+  },
+  {
+    id: "history-1901-mckinley-assassinated",
+    title: "USA:s president William McKinley mördas",
+    artist: "Världshistoria",
+    year: 1901,
+    decade: "1900-talet",
+    category: "pop",
+    contentType: "history",
+    summary: "President William McKinley skjuts vid en utställning i Buffalo och avlider av sina skador. Theodore Roosevelt övertar presidentposten.",
+    historyCategory: "world",
+    icon: "🏛️",
+  },
+];
