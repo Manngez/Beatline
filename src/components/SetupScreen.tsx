@@ -19,6 +19,14 @@ interface SetupScreenProps {
 const MUSIC_CATEGORIES: SongCategory[] = ["mixed", "pop", "swedish", "rap", "rock"];
 const HISTORY_CATEGORIES: HistoryCategory[] = ["all", "world", "sweden", "science", "culture", "sport", "society"];
 
+function MusicIcon() {
+  return <svg viewBox="0 0 64 64" className="h-9 w-9" fill="none"><path d="M24 46V18l26-5v27" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/><circle cx="17" cy="47" r="8" stroke="currentColor" strokeWidth="4"/><circle cx="43" cy="41" r="8" stroke="currentColor" strokeWidth="4"/><path d="M24 27l26-5" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/></svg>;
+}
+
+function HistoryIcon() {
+  return <svg viewBox="0 0 64 64" className="h-9 w-9" fill="none"><path d="M10 20h44M15 20l17-10 17 10M16 24v22m11-22v22m10-22v22m11-22v22M10 50h44" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+}
+
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [playerCount, setPlayerCount] = useState(2);
   const [names, setNames] = useState(["", ""]);
@@ -49,61 +57,64 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const totalCards = contentMode === "music" ? musicCounts[category] : historyCounts[historyCategory];
 
   return (
-    <div className="relative mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-12">
-      <div className="mb-8 text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-violet-300">BeatLine</p>
-        <h1 className="brand-text mt-2 text-5xl font-black sm:text-6xl">Bygg tidslinjen</h1>
-        <p className="mx-auto mt-3 max-w-md text-white/55">Välj musik eller historia. Databaserna är helt separata.</p>
-      </div>
+    <main className="relative mx-auto min-h-screen max-w-2xl overflow-hidden px-4 pb-14 pt-20 sm:px-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.30),_transparent_68%)]" />
 
-      <div className="glass-panel space-y-6 rounded-[1.75rem] p-5 sm:p-7">
-        <section>
-          <label className="mb-3 block text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Innehåll</label>
+      <header className="relative text-center">
+        <p className="text-[11px] font-black uppercase tracking-[0.34em] text-fuchsia-300">Lokalt spel</p>
+        <h1 className="brand-text brand-glow mt-3 text-4xl font-black sm:text-5xl">Gör spelet redo</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/50">Välj innehåll, antal spelare och namn innan ni börjar bygga tidslinjen.</p>
+      </header>
+
+      <div className="relative mt-8 space-y-5">
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.045] p-4 shadow-2xl backdrop-blur-xl sm:p-5">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/35">Steg 1</p><h2 className="mt-1 text-xl font-black">Vad vill ni spela?</h2></div>
+            <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs text-white/45">{totalCards} kort</span>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={() => setContentMode("music")} className={cn("rounded-2xl border p-4 text-left transition", contentMode === "music" ? "border-fuchsia-400/50 bg-fuchsia-500/15" : "border-white/10 bg-black/20")}>
-              <div className="text-2xl">🎵</div><div className="mt-2 font-black">Musik</div><p className="mt-1 text-xs text-white/45">Den befintliga låtdatabasen.</p>
+            <button type="button" onClick={() => { playClickSound(); setContentMode("music"); }} className={cn("group rounded-[1.5rem] border p-4 text-left transition active:scale-[0.98]", contentMode === "music" ? "border-fuchsia-400/60 bg-fuchsia-500/15 shadow-[0_0_28px_rgba(217,70,239,0.16)]" : "border-white/10 bg-black/20")}>
+              <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", contentMode === "music" ? "bg-fuchsia-500/20 text-fuchsia-300" : "bg-white/5 text-white/45")}><MusicIcon /></div>
+              <div className="mt-4 text-lg font-black">Musik</div><p className="mt-1 text-xs leading-5 text-white/45">Placera låtar i rätt årtionde.</p>
             </button>
-            <button type="button" onClick={() => setContentMode("history")} className={cn("rounded-2xl border p-4 text-left transition", contentMode === "history" ? "border-amber-400/50 bg-amber-500/15" : "border-white/10 bg-black/20")}>
-              <div className="text-2xl">📚</div><div className="mt-2 font-black">Historia</div><p className="mt-1 text-xs text-white/45">Separata händelser från 1900–2025.</p>
+            <button type="button" onClick={() => { playClickSound(); setContentMode("history"); }} className={cn("group rounded-[1.5rem] border p-4 text-left transition active:scale-[0.98]", contentMode === "history" ? "border-amber-300/60 bg-amber-400/10 shadow-[0_0_28px_rgba(251,191,36,0.13)]" : "border-white/10 bg-black/20")}>
+              <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", contentMode === "history" ? "bg-amber-400/15 text-amber-300" : "bg-white/5 text-white/45")}><HistoryIcon /></div>
+              <div className="mt-4 text-lg font-black">Historia</div><p className="mt-1 text-xs leading-5 text-white/45">Placera händelser på tidslinjen.</p>
             </button>
           </div>
-        </section>
 
-        <section>
-          <label className="mb-3 block text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">{contentMode === "music" ? "Musikkategori" : "Historiekategori"}</label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {contentMode === "music" ? MUSIC_CATEGORIES.map((key) => {
               const meta = CATEGORY_META[key];
               const selected = category === key;
-              return <button key={key} type="button" onClick={() => setCategory(key)} className={cn("rounded-2xl border p-3.5 text-left transition", selected ? "border-white/25 bg-white/10" : "border-white/10 bg-black/20 hover:bg-white/5")}>
-                <div className="flex items-center justify-between gap-2"><span className="font-bold">{meta.emoji} {meta.label}</span><span className="text-xs text-white/45">{musicCounts[key]}</span></div><p className="mt-1 text-[11px] text-white/40">{meta.description}</p>
-              </button>;
+              return <button key={key} type="button" onClick={() => { playClickSound(); setCategory(key); }} className={cn("rounded-2xl border px-3 py-3 text-left transition active:scale-[0.98]", selected ? "border-fuchsia-400/45 bg-fuchsia-500/12" : "border-white/8 bg-black/20 text-white/55")}><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-bold">{meta.emoji} {meta.label}</span><span className="text-[10px] text-white/35">{musicCounts[key]}</span></div></button>;
             }) : HISTORY_CATEGORIES.map((key) => {
               const meta = HISTORY_CATEGORY_META[key];
               const selected = historyCategory === key;
-              return <button key={key} type="button" onClick={() => setHistoryCategory(key)} className={cn("rounded-2xl border p-3.5 text-left transition", selected ? "border-amber-400/40 bg-amber-500/10" : "border-white/10 bg-black/20 hover:bg-white/5")}>
-                <div className="flex items-center justify-between gap-2"><span className="font-bold">{meta.emoji} {meta.label}</span><span className="text-xs text-white/45">{historyCounts[key]}</span></div><p className="mt-1 text-[11px] text-white/40">{meta.description}</p>
-              </button>;
+              return <button key={key} type="button" onClick={() => { playClickSound(); setHistoryCategory(key); }} className={cn("rounded-2xl border px-3 py-3 text-left transition active:scale-[0.98]", selected ? "border-amber-300/45 bg-amber-400/10" : "border-white/8 bg-black/20 text-white/55")}><div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-bold">{meta.emoji} {meta.label}</span><span className="text-[10px] text-white/35">{historyCounts[key]}</span></div></button>;
             })}
           </div>
         </section>
 
-        <section>
-          <label className="mb-3 block text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Antal spelare</label>
-          <div className="grid grid-cols-6 gap-2">{[1, 2, 3, 4, 5, 6].map((number) => <button key={number} type="button" onClick={() => updateCount(number)} className={cn("flex h-12 items-center justify-center rounded-2xl text-sm font-bold transition", playerCount === number ? "bg-gradient-to-br from-violet-500 to-fuchsia-500" : "bg-white/5 text-white/45 ring-1 ring-white/10")}>{number}</button>)}</div>
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl sm:p-5">
+          <div className="mb-4"><p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/35">Steg 2</p><h2 className="mt-1 text-xl font-black">Hur många spelar?</h2></div>
+          <div className="grid grid-cols-6 gap-2">{[1, 2, 3, 4, 5, 6].map((number) => <button key={number} type="button" onClick={() => updateCount(number)} className={cn("flex h-12 items-center justify-center rounded-2xl text-sm font-black transition active:scale-95", playerCount === number ? "bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 shadow-[0_0_22px_rgba(217,70,239,0.28)]" : "border border-white/10 bg-black/25 text-white/45")}>{number}</button>)}</div>
+
+          <div className="mt-5 space-y-3">
+            {names.map((name, index) => <div key={index} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-black/20 p-2"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-black" style={{ backgroundColor: PLAYER_COLORS[index] }}>{index + 1}</div><input type="text" value={name} onChange={(event) => { const next = [...names]; next[index] = event.target.value; setNames(next); }} placeholder={`Spelare ${index + 1}`} maxLength={16} className="min-w-0 flex-1 bg-transparent px-2 py-2 font-semibold text-white outline-none placeholder:text-white/25" /></div>)}
+          </div>
         </section>
 
-        <section className="space-y-3">
-          <label className="block text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">Spelarnamn</label>
-          {names.map((name, index) => <div key={index} className="flex items-center gap-3"><div className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ backgroundColor: PLAYER_COLORS[index] }} /><input type="text" value={name} onChange={(event) => { const next = [...names]; next[index] = event.target.value; setNames(next); }} placeholder={`Spelare ${index + 1}`} maxLength={16} className="w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-white placeholder:text-white/25 focus:outline-none" /></div>)}
-        </section>
+        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl">
+          <div><div className="font-black">Använd tokens</div><p className="mt-1 text-xs leading-5 text-white/45">Ger spelarna möjlighet att hoppa över ett svårt kort.</p></div>
+          <input type="checkbox" checked={useTokens} onChange={(event) => setUseTokens(event.target.checked)} className="h-5 w-5 shrink-0 accent-fuchsia-500" />
+        </label>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/25 p-4"><input type="checkbox" checked={useTokens} onChange={(event) => setUseTokens(event.target.checked)} className="mt-1 h-4 w-4 accent-violet-500" /><div><div className="font-semibold">Tokens</div><p className="mt-0.5 text-sm text-white/45">Hoppa över ett kort. Streak ×3 ger en bonustoken vid bankning.</p></div></label>
+        <div className="rounded-[1.5rem] border border-white/10 bg-black/25 px-4 py-3 text-sm text-white/55"><strong className="text-white">{selectedMeta.emoji} {selectedMeta.label}</strong><span className="ml-2">· {playerCount} {playerCount === 1 ? "spelare" : "spelare"} · {totalCards} kort</span></div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/60"><strong className="text-white">{selectedMeta.emoji} {selectedMeta.label}</strong><span className="ml-2">· {totalCards} separata kort</span><p className="mt-2 text-xs text-white/40">Historia läggs aldrig till i musikens Blandat-kategori.</p></div>
-
-        <button type="button" onClick={handleStart} className="w-full rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-400 py-4 text-lg font-black">Starta {contentMode === "history" ? "Historia" : "BeatLine"}</button>
+        <button type="button" onClick={handleStart} className="w-full rounded-[1.5rem] bg-gradient-to-r from-violet-600 via-fuchsia-500 to-pink-500 py-4 text-lg font-black shadow-[0_14px_45px_rgba(217,70,239,0.28)] transition active:scale-[0.985]">Starta spelet</button>
       </div>
-    </div>
+    </main>
   );
 }
