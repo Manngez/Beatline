@@ -1,1 +1,1 @@
-Trigger GitHub Pages deployment for Beatline online room redesign.
+Trigger GitHub Pages deployment for Beatline timeline scrolling fix.
