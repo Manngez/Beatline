@@ -1,4 +1,5 @@
 import type { Song } from "../../types";
+import { HISTORY_EXPANSION_EVENTS } from "./expansion";
 
 export const HISTORY_1900_ADDITIONS: Song[] = [
   {
@@ -37,4 +38,7 @@ export const HISTORY_1900_ADDITIONS: Song[] = [
     historyCategory: "world",
     icon: "⚔️",
   },
+  ...HISTORY_EXPANSION_EVENTS.filter(
+    (event) => !event.title.startsWith("Sverige vinner Eurovision med Diggi-loo"),
+  ),
 ];
