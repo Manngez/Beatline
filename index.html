@@ -23,10 +23,23 @@
       }
       #beatline-bug-report:hover { background: rgba(35,25,55,.96); }
       #beatline-bug-report:focus-visible { outline: 3px solid #a78bfa; outline-offset: 3px; }
+      #beatline-developer-link {
+        position: fixed;
+        left: 14px;
+        bottom: 14px;
+        z-index: 9999;
+        color: rgba(255,255,255,.4);
+        font: 500 11px system-ui, sans-serif;
+        text-decoration: none;
+        padding: 8px;
+      }
+      #beatline-developer-link:hover { color: rgba(255,255,255,.85); }
+      #beatline-developer-link:focus-visible { outline: 2px solid #a78bfa; border-radius: 8px; }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <a id="beatline-developer-link" href="./admin.html">Utvecklare</a>
     <a id="beatline-bug-report" href="https://github.com/Manngez/Beatline/issues/new" target="_blank" rel="noreferrer">🐞 Rapportera bugg</a>
     <script>
       (() => {

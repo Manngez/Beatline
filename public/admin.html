@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#05050a" />
+  <title>BeatLine – Kontrollpanel</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#05050a;color:#fff;font-family:Inter,system-ui,sans-serif}button,input,select,textarea{font:inherit}.wrap{max-width:1050px;margin:auto;padding:24px}.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:20px;margin-bottom:18px}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}input,select,textarea{width:100%;background:#11111b;color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:12px}textarea{min-height:90px}.btn{border:0;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer}.primary{background:#7c3aed;color:#fff}.secondary{background:#272735;color:#fff}.danger{background:#7f1d1d;color:#fff}.muted{color:rgba(255,255,255,.58)}.hidden{display:none!important}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:14px;margin-top:10px}.pill{font-size:12px;background:#272735;padding:5px 9px;border-radius:999px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tabs button.active{background:#7c3aed}.notice{padding:12px;border-radius:12px;background:#3f2b08;color:#fde68a;margin-bottom:16px}.actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:700px){.row,.grid{grid-template-columns:1fr}.item{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section id="login" class="card" style="max-width:480px;margin:10vh auto">
+    <p class="muted">BeatLine</p><h1>Utvecklarinloggning</h1>
+    <p id="loginHelp" class="muted">Första gången väljer du själv ett lösenord för den här enheten.</p>
+    <input id="password" type="password" placeholder="Lösenord" autocomplete="current-password" />
+    <button id="loginButton" class="btn primary" style="width:100%;margin-top:12px">Logga in</button>
+    <p id="loginError" style="color:#fca5a5"></p>
+    <a href="./" class="muted">← Tillbaka till spelet</a>
+  </section>
+
+  <main id="panel" class="hidden">
+    <div class="top"><div><p class="muted">BeatLine</p><h1>Kontrollpanel</h1></div><div class="actions"><a href="./" class="btn secondary" style="text-decoration:none">Öppna spelet</a><button id="logout" class="btn secondary">Logga ut</button></div></div>
+    <div class="notice">Den här första versionen sparar ändringar endast i den här webbläsaren. Exportera en säkerhetskopia innan du byter enhet eller rensar webbläsardata.</div>
+    <div class="tabs"><button class="btn secondary active" data-tab="questions">Frågor</button><button class="btn secondary" data-tab="categories">Kategorier</button><button class="btn secondary" data-tab="settings">Inställningar</button><button class="btn secondary" data-tab="backup">Import/export</button></div>
+
+    <section id="questions" class="tab card">
+      <div class="top"><div><h2>Frågor och låtar</h2><p class="muted">Skapa eget innehåll som senare kan kopplas direkt till spelets frågebank.</p></div><button id="newQuestion" class="btn primary">+ Ny fråga</button></div>
+      <div id="questionForm" class="hidden" style="margin-top:18px">
+        <input id="questionId" type="hidden" />
+        <div class="row"><input id="title" placeholder="Låt eller frågetitel" /><input id="artist" placeholder="Artist eller svar" /></div>
+        <div class="grid" style="margin-top:12px"><input id="year" type="number" placeholder="År" /><select id="questionCategory"></select><select id="status"><option value="draft">Utkast</option><option value="published">Publicerad</option><option value="archived">Arkiverad</option></select></div>
+        <textarea id="notes" placeholder="Anteckningar, ledtråd eller länk" style="margin-top:12px"></textarea>
+        <div class="actions" style="margin-top:12px"><button id="saveQuestion" class="btn primary">Spara</button><button id="cancelQuestion" class="btn secondary">Avbryt</button></div>
+      </div>
+      <input id="questionSearch" placeholder="Sök bland frågor…" style="margin-top:16px" />
+      <div id="questionList"></div>
+    </section>
+
+    <section id="categories" class="tab card hidden"><h2>Kategorier</h2><div class="row"><input id="newCategoryName" placeholder="Ny kategori" /><button id="addCategory" class="btn primary">Lägg till kategori</button></div><div id="categoryList"></div></section>
+
+    <section id="settings" class="tab card hidden"><h2>Spelinställningar</h2><div class="row"><label>Standardtid per fråga<input id="roundSeconds" type="number" min="5" max="300" /></label><label>Startpoäng<input id="startPoints" type="number" min="0" max="100" /></label></div><label style="display:block;margin-top:12px"><input id="tokensEnabled" type="checkbox" style="width:auto" /> Tokens aktiverade som standard</label><button id="saveSettings" class="btn primary" style="margin-top:14px">Spara inställningar</button></section>
+
+    <section id="backup" class="tab card hidden"><h2>Import och export</h2><p class="muted">Exportera allt som en JSON-fil eller importera en tidigare säkerhetskopia.</p><div class="actions"><button id="exportData" class="btn primary">Exportera säkerhetskopia</button><label class="btn secondary" style="cursor:pointer">Importera fil<input id="importData" type="file" accept="application/json" class="hidden" /></label><button id="resetData" class="btn danger">Radera lokala ändringar</button></div></section>
+  </main>
+</div>
+<script>
+const KEY='beatline-admin-data-v1', PASS='beatline-admin-password-v1', SESSION='beatline-admin-session';
+const defaults={categories:['Pop','Rock','Rap','Svenskt','Blandat'],questions:[],settings:{roundSeconds:30,startPoints:0,tokensEnabled:true}};
+const load=()=>{try{return {...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return structuredClone(defaults)}};
+let data=load();
+const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
+const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))).map(b=>b.toString(16).padStart(2,'0')).join('');
+const $=id=>document.getElementById(id);
+async function login(){const value=$('password').value;if(value.length<6){$('loginError').textContent='Lösenordet måste ha minst 6 tecken.';return}const stored=localStorage.getItem(PASS);const digest=await hash(value);if(!stored)localStorage.setItem(PASS,digest);else if(stored!==digest){$('loginError').textContent='Fel lösenord.';return}sessionStorage.setItem(SESSION,'1');showPanel()}
+function showPanel(){$('login').classList.add('hidden');$('panel').classList.remove('hidden');renderAll()}
+function renderAll(){renderCategories();renderQuestions();$('roundSeconds').value=data.settings.roundSeconds;$('startPoints').value=data.settings.startPoints;$('tokensEnabled').checked=data.settings.tokensEnabled}
+function renderCategories(){$('questionCategory').innerHTML=data.categories.map(c=>`<option>${escapeHtml(c)}</option>`).join('');$('categoryList').innerHTML=data.categories.map((c,i)=>`<div class="item"><strong>${escapeHtml(c)}</strong><button class="btn danger" onclick="removeCategory(${i})">Ta bort</button></div>`).join('')||'<p class="muted">Inga kategorier ännu.</p>'}
+function renderQuestions(){const q=$('questionSearch').value.toLowerCase();const rows=data.questions.filter(x=>[x.title,x.artist,x.category].join(' ').toLowerCase().includes(q));$('questionList').innerHTML=rows.map(x=>`<div class="item"><div><strong>${escapeHtml(x.title)}</strong><div class="muted">${escapeHtml(x.artist)} · ${x.year||'År saknas'} · ${escapeHtml(x.category)}</div><span class="pill">${x.status==='published'?'Publicerad':x.status==='archived'?'Arkiverad':'Utkast'}</span></div><div class="actions"><button class="btn secondary" onclick="editQuestion('${x.id}')">Redigera</button><button class="btn danger" onclick="deleteQuestion('${x.id}')">Ta bort</button></div></div>`).join('')||'<p class="muted">Inga frågor matchar.</p>'}
+function openForm(q={}){$('questionForm').classList.remove('hidden');$('questionId').value=q.id||'';$('title').value=q.title||'';$('artist').value=q.artist||'';$('year').value=q.year||'';$('questionCategory').value=q.category||data.categories[0]||'';$('status').value=q.status||'draft';$('notes').value=q.notes||'';$('title').focus()}
+function closeForm(){$('questionForm').classList.add('hidden')}
+function escapeHtml(v=''){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+window.editQuestion=id=>openForm(data.questions.find(x=>x.id===id)||{});
+window.deleteQuestion=id=>{if(confirm('Ta bort frågan?')){data.questions=data.questions.filter(x=>x.id!==id);save();renderQuestions()}};
+window.removeCategory=i=>{const c=data.categories[i];if(data.questions.some(q=>q.category===c)){alert('Kategorin används av en fråga och kan inte tas bort.');return}data.categories.splice(i,1);save();renderCategories()};
+$('loginButton').onclick=login;$('password').onkeydown=e=>{if(e.key==='Enter')login()};
+$('logout').onclick=()=>{sessionStorage.removeItem(SESSION);location.reload()};
+$('newQuestion').onclick=()=>openForm();$('cancelQuestion').onclick=closeForm;$('questionSearch').oninput=renderQuestions;
+$('saveQuestion').onclick=()=>{const title=$('title').value.trim(),artist=$('artist').value.trim();if(!title||!artist){alert('Titel och artist/svar måste fyllas i.');return}const id=$('questionId').value||crypto.randomUUID();const item={id,title,artist,year:Number($('year').value)||null,category:$('questionCategory').value,status:$('status').value,notes:$('notes').value.trim(),updatedAt:new Date().toISOString()};const i=data.questions.findIndex(x=>x.id===id);if(i>=0)data.questions[i]=item;else data.questions.unshift(item);save();closeForm();renderQuestions()};
+$('addCategory').onclick=()=>{const c=$('newCategoryName').value.trim();if(!c||data.categories.some(x=>x.toLowerCase()===c.toLowerCase()))return;data.categories.push(c);$('newCategoryName').value='';save();renderCategories()};
+$('saveSettings').onclick=()=>{data.settings={roundSeconds:Number($('roundSeconds').value)||30,startPoints:Number($('startPoints').value)||0,tokensEnabled:$('tokensEnabled').checked};save();alert('Inställningarna är sparade lokalt.')};
+$('exportData').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download=`beatline-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href)};
+$('importData').onchange=async e=>{try{const parsed=JSON.parse(await e.target.files[0].text());if(!Array.isArray(parsed.categories)||!Array.isArray(parsed.questions))throw 0;data={...defaults,...parsed};save();renderAll();alert('Importen lyckades.')}catch{alert('Filen kunde inte importeras.')}};
+$('resetData').onclick=()=>{if(confirm('Radera alla lokala frågor, kategorier och inställningar?')){data=structuredClone(defaults);save();renderAll()}};
+document.querySelectorAll('[data-tab]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===btn));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('hidden',x.id!==btn.dataset.tab))});
+if(sessionStorage.getItem(SESSION)==='1')showPanel();else if(localStorage.getItem(PASS))$('loginHelp').textContent='Logga in med lösenordet du valde på den här enheten.';
+</script>
+</body></html>
