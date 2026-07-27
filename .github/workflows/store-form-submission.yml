@@ -1,0 +1,89 @@
+name: Store form submission
+
+on:
+  repository_dispatch:
+    types: [add_form_submission]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: form-submissions
+  cancel-in-progress: false
+
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Validate and append submission
+        env:
+          PAYLOAD_JSON: ${{ toJson(github.event.client_payload) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(os.environ["PAYLOAD_JSON"])
+
+          def clean(value, limit):
+              if not isinstance(value, str):
+                  return ""
+              return value.strip()[:limit]
+
+          title = clean(payload.get("title"), 120)
+          category = clean(payload.get("category"), 40)
+          content = clean(payload.get("content"), 5000)
+          submitted_by = clean(payload.get("submittedBy"), 80)
+          submitted_at = clean(payload.get("submittedAt"), 50)
+          source = clean(payload.get("source"), 500)
+
+          if not title or not content:
+              raise SystemExit("title and content are required")
+
+          allowed_categories = {"music", "history", "category", "other"}
+          if category not in allowed_categories:
+              category = "other"
+
+          path = Path("data/form-submissions.json")
+          path.parent.mkdir(parents=True, exist_ok=True)
+
+          try:
+              existing = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+          except json.JSONDecodeError as error:
+              raise SystemExit(f"Invalid existing JSON: {error}")
+
+          if not isinstance(existing, list):
+              raise SystemExit("data/form-submissions.json must contain a JSON array")
+
+          existing.append({
+              "id": f"submission-{len(existing) + 1:06d}",
+              "title": title,
+              "category": category,
+              "content": content,
+              "submittedBy": submitted_by,
+              "submittedAt": submitted_at,
+              "source": source,
+              "receivedByGitHubAt": "${{ github.event.created_at }}",
+          })
+
+          path.write_text(json.dumps(existing, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Commit stored submission
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/form-submissions.json
+          if git diff --cached --quiet; then
+            echo "No change to commit"
+            exit 0
+          fi
+          git commit -m "data: store developer form submission"
+          git pull --rebase origin main
+          git push origin HEAD:main
