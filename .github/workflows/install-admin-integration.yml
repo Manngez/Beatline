@@ -1,0 +1,90 @@
+name: Install Beatline admin integration
+
+on:
+  push:
+    paths:
+      - .github/workflows/install-admin-integration.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Connect custom songs to game deck
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/data/songs.ts')
+          text = path.read_text(encoding='utf-8')
+          old = '''export function getSongsForCategory(category: SongCategory): Song[] {
+            if (category === "mixed") return ALL_SONGS;
+            return SONGS_BY_CATEGORY[category];
+          }
+
+          export function getCategoryCounts(): Record<SongCategory, number> {
+            return {
+              mixed: ALL_SONGS.length,
+              pop: popSongs.length,
+              rock: rockSongs.length,
+              rap: rapSongs.length,
+              swedish: swedishSongs.length,
+            };
+          }'''
+          new = '''const CUSTOM_SONGS_KEY = "beatline-custom-songs-v1";
+
+          function getCustomSongs(): Song[] {
+            if (typeof window === "undefined") return [];
+            try {
+              const parsed: unknown = JSON.parse(window.localStorage.getItem(CUSTOM_SONGS_KEY) ?? "[]");
+              if (!Array.isArray(parsed)) return [];
+              return parsed.filter((item): item is Song => {
+                if (!item || typeof item !== "object") return false;
+                const song = item as Partial<Song>;
+                return typeof song.id === "string"
+                  && typeof song.title === "string"
+                  && typeof song.artist === "string"
+                  && Number.isInteger(song.year)
+                  && ["pop", "swedish", "rap", "rock"].includes(String(song.category));
+              });
+            } catch {
+              return [];
+            }
+          }
+
+          export function getSongsForCategory(category: SongCategory): Song[] {
+            const customSongs = getCustomSongs();
+            if (category === "mixed") return dedupe([...ALL_SONGS, ...customSongs]);
+            return dedupe([...SONGS_BY_CATEGORY[category], ...customSongs.filter((song) => song.category === category)]);
+          }
+
+          export function getCategoryCounts(): Record<SongCategory, number> {
+            const customSongs = getCustomSongs();
+            return {
+              mixed: dedupe([...ALL_SONGS, ...customSongs]).length,
+              pop: dedupe([...popSongs, ...customSongs.filter((song) => song.category === "pop")]).length,
+              rock: dedupe([...rockSongs, ...customSongs.filter((song) => song.category === "rock")]).length,
+              rap: dedupe([...rapSongs, ...customSongs.filter((song) => song.category === "rap")]).length,
+              swedish: dedupe([...swedishSongs, ...customSongs.filter((song) => song.category === "swedish")]).length,
+            };
+          }'''
+          if old not in text:
+              raise SystemExit('Expected songs functions were not found; no files changed.')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+          PY
+      - name: Test and build
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/songs.ts
+          git commit -m "feat: include admin songs in game deck"
+          git push origin HEAD:main
