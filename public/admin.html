@@ -4,224 +4,104 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#080612" />
-  <title>Beatline Admin</title>
+  <title>Beatline – lägg till låtar</title>
   <style>
-    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #3b1778 0, #100a20 42%, #06050b 100%); color: #fff; }
-    main { width: min(900px, calc(100% - 24px)); margin: 0 auto; padding: 24px 0 64px; }
-    header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
-    h1 { margin:4px 0; font-size:clamp(2rem,8vw,3.6rem); }
-    h2 { margin:0 0 14px; }
-    p { color:#c7bfd9; line-height:1.5; }
-    code { color:#e9d5ff; }
-    .eyebrow { font-size:.75rem; font-weight:900; letter-spacing:.22em; color:#c4b5fd; }
-    .card { background:rgba(13,10,25,.88); border:1px solid rgba(255,255,255,.12); border-radius:24px; padding:18px; box-shadow:0 24px 70px rgba(0,0,0,.35); margin-bottom:16px; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    label { display:block; font-weight:800; font-size:.9rem; }
-    input, select, textarea { width:100%; margin-top:7px; padding:13px 14px; border-radius:14px; border:1px solid rgba(255,255,255,.16); background:#0b0913; color:#fff; font:inherit; }
-    textarea { min-height:230px; resize:vertical; line-height:1.55; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
-    button, .button { border:0; border-radius:14px; padding:13px 16px; font:800 1rem system-ui; color:#fff; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
-    .primary { background:linear-gradient(90deg,#7c3aed,#d946ef); width:100%; margin-top:16px; }
-    .secondary { background:rgba(255,255,255,.09); }
-    .danger { background:rgba(239,68,68,.18); color:#fecaca; }
-    .actions { display:flex; flex-wrap:wrap; gap:10px; }
-    .status { margin-top:12px; padding:11px 13px; border-radius:12px; background:rgba(255,255,255,.06); color:#d8d0e7; white-space:pre-wrap; }
-    .status.error { background:rgba(239,68,68,.13); color:#fecaca; }
-    .status.success { background:rgba(34,197,94,.13); color:#bbf7d0; }
-    .song { display:grid; grid-template-columns:1fr auto; gap:12px; padding:14px 0; border-bottom:1px solid rgba(255,255,255,.08); }
-    .song:last-child { border-bottom:0; }
-    .song strong { display:block; }
-    .meta { color:#aaa0ba; font-size:.9rem; margin-top:4px; }
-    .empty { padding:20px; text-align:center; color:#aaa0ba; }
-    .count { background:#7c3aed; border-radius:999px; padding:4px 10px; font-size:.8rem; font-weight:900; }
-    .hidden { display:none !important; }
-    .login { max-width:440px; margin:12vh auto 0; }
-    .hint { margin:8px 0 0; font-size:.82rem; color:#aaa0ba; }
-    .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
-    .tab.active { background:#7c3aed; }
-    @media (max-width:640px) { .grid { grid-template-columns:1fr; } header { align-items:flex-start; flex-direction:column; } .actions > * { flex:1; } .song { grid-template-columns:1fr; } }
+    :root{color-scheme:dark;font-family:Inter,system-ui,sans-serif}*{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#3b1778 0,#100a20 42%,#06050b 100%);color:#fff}
+    main{width:min(860px,calc(100% - 24px));margin:auto;padding:24px 0 60px}.card{background:rgba(13,10,25,.9);border:1px solid #ffffff1f;border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 24px 70px #0006}
+    h1{font-size:clamp(2rem,8vw,3.5rem);margin:4px 0}h2{margin:0 0 12px}p{color:#c7bfd9;line-height:1.5}.eyebrow{font-size:.75rem;font-weight:900;letter-spacing:.22em;color:#c4b5fd}
+    label{display:block;font-weight:800;font-size:.9rem;margin-top:12px}input,select,textarea{width:100%;margin-top:7px;padding:13px 14px;border-radius:14px;border:1px solid #ffffff29;background:#0b0913;color:#fff;font:inherit}
+    textarea{min-height:260px;resize:vertical;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+    button,.button{border:0;border-radius:14px;padding:13px 16px;font:800 1rem system-ui;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center;align-items:center}.primary{width:100%;margin-top:16px;background:linear-gradient(90deg,#7c3aed,#d946ef)}.secondary{background:#ffffff17}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.status{white-space:pre-wrap;margin-top:12px;padding:12px;border-radius:12px;background:#ffffff0f;color:#d8d0e7}.ok{background:#22c55e21;color:#bbf7d0}.error{background:#ef444421;color:#fecaca}.hint{font-size:.84rem;color:#aaa0ba}.actions{display:flex;gap:10px;flex-wrap:wrap}code{color:#e9d5ff}
+    @media(max-width:640px){.grid{grid-template-columns:1fr}.actions>*{flex:1}}
   </style>
 </head>
-<body>
-<main>
-  <section id="login" class="card login">
-    <div class="eyebrow">BEATLINE ADMIN</div>
-    <h1>Öppna admin</h1>
-    <p>PIN-koden skyddar sidan på den här enheten. Första gången väljer du själv en kod.</p>
-    <label>PIN-kod<input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="4–8 siffror" /></label>
-    <button id="loginButton" class="primary">Fortsätt</button>
-    <div id="loginStatus" class="status">Ingen PIN är ännu angiven på denna enhet.</div>
+<body><main>
+  <header style="margin-bottom:18px"><div class="eyebrow">BEATLINE ADMIN</div><h1>Lägg till låtar</h1><p>Låtarna skrivs direkt in i <code>src/data/songs.ts</code> på GitHub och blir en permanent del av spelet.</p></header>
+
+  <section class="card">
+    <h2>GitHub-anslutning</h2>
+    <p class="hint">Använd en finmaskig GitHub-token med behörigheten <strong>Contents: Read and write</strong> endast för repot <strong>Manngez/Beatline</strong>. Token sparas bara i den här flikens session och följer inte med i någon commit.</p>
+    <label>GitHub-token<input id="token" type="password" autocomplete="off" placeholder="github_pat_..." /></label>
+    <div class="grid">
+      <label>Branch<input id="branch" value="main" /></label>
+      <label>Commit-meddelande<input id="message" value="feat: add songs from Beatline admin" /></label>
+    </div>
+    <button id="remember" class="secondary" type="button" style="margin-top:12px">Behåll token under denna session</button>
   </section>
 
-  <section id="admin" class="hidden">
-    <header>
-      <div><div class="eyebrow">BEATLINE</div><h1>Låtadmin</h1><p style="margin:0">Lägg till en eller många låtar från mobilen.</p></div>
-      <a class="button secondary" href="./">Till spelet</a>
-    </header>
+  <section class="card">
+    <h2>Många låtar samtidigt</h2>
+    <div class="grid">
+      <label>Standardkategori<select id="defaultCategory"><option value="pop">Pop</option><option value="rock">Rock</option><option value="rap">Rap</option><option value="swedish">Svenska</option></select></label>
+      <div><p class="hint">En fjärde kolumn på en rad kan åsidosätta standardkategorin.</p></div>
+    </div>
+    <label>Klistra in låtar<textarea id="songs" placeholder="Dancing Queen | ABBA | 1976 | pop&#10;The Final Countdown | Europe | 1986 | rock&#10;Lose Yourself | Eminem | 2002 | rap&#10;Sommartider | Gyllene Tider | 1982 | swedish"></textarea></label>
+    <p class="hint">Format: <code>Titel | Artist | År | kategori</code>. Kategorin är valfri och kan vara <code>pop</code>, <code>rock</code>, <code>rap</code>, <code>swedish</code>, <code>svensk</code> eller <code>svenska</code>.</p>
+    <button id="save" class="primary" type="button">Skriv in låtarna på GitHub</button>
+    <div id="status" class="status">Ingen ändring har gjorts ännu.</div>
+  </section>
 
-    <section class="card">
-      <div class="tabs">
-        <button id="singleTab" class="tab secondary active" type="button">En låt</button>
-        <button id="bulkTab" class="tab secondary" type="button">Många låtar</button>
-      </div>
-
-      <div id="singlePanel">
-        <h2 id="formTitle">Lägg till låt</h2>
-        <form id="songForm">
-          <input id="editingId" type="hidden" />
-          <div class="grid">
-            <label>Låt<input id="title" maxlength="120" required placeholder="Exempel: Dancing Queen" /></label>
-            <label>Artist<input id="artist" maxlength="120" required placeholder="Exempel: ABBA" /></label>
-            <label>År<input id="year" type="number" min="1900" max="2100" required placeholder="1976" /></label>
-            <label>Kategori<select id="category"><option value="pop">Pop</option><option value="swedish">Svenska</option><option value="rap">Rap</option><option value="rock">Rock</option></select></label>
-          </div>
-          <button class="primary" type="submit">Spara låt</button>
-          <button id="cancelEdit" class="secondary hidden" type="button" style="width:100%;margin-top:10px">Avbryt redigering</button>
-        </form>
-      </div>
-
-      <div id="bulkPanel" class="hidden">
-        <h2>Lägg till många låtar</h2>
-        <div class="grid">
-          <label>Standardkategori
-            <select id="bulkCategory"><option value="pop">Pop</option><option value="swedish">Svenska</option><option value="rap">Rap</option><option value="rock">Rock</option></select>
-          </label>
-          <div>
-            <p class="hint" style="margin-top:0">Standardkategorin används när raden saknar en egen kategori.</p>
-          </div>
-        </div>
-        <label style="margin-top:14px">Klistra in låtar
-          <textarea id="bulkSongs" placeholder="Dancing Queen | ABBA | 1976 | pop&#10;The Final Countdown | Europe | 1986 | rock&#10;Sommartider | Gyllene Tider | 1982 | swedish"></textarea>
-        </label>
-        <p class="hint">En låt per rad: <code>Titel | Artist | År</code>. Fjärde kolumnen är valfri: <code>pop</code>, <code>rock</code>, <code>rap</code> eller <code>swedish</code>.</p>
-        <button id="bulkSave" class="primary" type="button">Kontrollera och spara alla</button>
-      </div>
-
-      <div id="status" class="status">Dina låtar sparas på den här enheten.</div>
-    </section>
-
-    <section class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>Mina låtar</h2><span id="count" class="count">0</span></div>
-      <label>Sök<input id="search" placeholder="Sök låt eller artist" /></label>
-      <div id="songList"></div>
-    </section>
-
-    <section class="card">
-      <h2>Säkerhetskopia</h2>
-      <p>Exportera filen för att flytta låtarna till en annan telefon eller spara en kopia.</p>
-      <div class="actions">
-        <button id="exportButton" class="secondary" type="button">Exportera</button>
-        <label class="button secondary" style="cursor:pointer">Importera<input id="importInput" type="file" accept="application/json" hidden /></label>
-        <button id="changePin" class="secondary" type="button">Byt PIN</button>
-        <button id="clearButton" class="danger" type="button">Radera alla</button>
-      </div>
-    </section>
+  <section class="card">
+    <h2>Vad som händer</h2>
+    <p>Admin-sidan hämtar den senaste versionen av låtfilen, lägger varje låt i rätt hårdkodad lista och gör en enda commit. GitHub Pages kan därefter bygga om spelet från den nya koden.</p>
+    <div class="actions"><a class="button secondary" href="./">Till spelet</a><a class="button secondary" href="https://github.com/Manngez/Beatline" target="_blank" rel="noreferrer">Öppna GitHub</a></div>
   </section>
 </main>
 <script>
-  const SONG_KEY = 'beatline-custom-songs-v1';
-  const PIN_KEY = 'beatline-admin-pin-v1';
-  const VALID_CATEGORIES = ['pop','swedish','rap','rock'];
-  const CATEGORY_ALIASES = { pop:'pop', rock:'rock', rap:'rap', hiphop:'rap', 'hip-hop':'rap', svenska:'swedish', svensk:'swedish', swedish:'swedish' };
-  const $ = (id) => document.getElementById(id);
-  const readSongs = () => { try { const value = JSON.parse(localStorage.getItem(SONG_KEY) || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } };
-  const writeSongs = (songs) => localStorage.setItem(SONG_KEY, JSON.stringify(songs));
-  const hashPin = async (pin) => { const bytes = new TextEncoder().encode(`beatline:${pin}`); const hash = await crypto.subtle.digest('SHA-256', bytes); return Array.from(new Uint8Array(hash)).map(x => x.toString(16).padStart(2,'0')).join(''); };
-  let songs = readSongs();
-
-  async function login() {
-    const pin = $('pin').value.trim();
-    if (!/^\d{4,8}$/.test(pin)) { $('loginStatus').textContent = 'Ange 4–8 siffror.'; return; }
-    const hash = await hashPin(pin);
-    const stored = localStorage.getItem(PIN_KEY);
-    if (!stored) localStorage.setItem(PIN_KEY, hash);
-    else if (stored !== hash) { $('loginStatus').textContent = 'Fel PIN-kod.'; return; }
-    sessionStorage.setItem('beatline-admin-open', '1');
-    $('login').classList.add('hidden'); $('admin').classList.remove('hidden'); render();
-  }
-
-  function normalize(raw) {
-    const year = Number(raw.year);
-    const category = CATEGORY_ALIASES[String(raw.category || '').trim().toLowerCase()] || 'pop';
-    return { id: raw.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, title:String(raw.title||'').trim(), artist:String(raw.artist||'').trim(), year, decade:`${Math.floor(year/10)*10}-tal`, category, contentType:'music' };
-  }
-
-  function setStatus(message, type='') {
-    $('status').textContent = message;
-    $('status').className = `status ${type}`.trim();
-  }
-
-  function render() {
-    const query = $('search').value.trim().toLowerCase();
-    const visible = songs.filter(s => `${s.title} ${s.artist}`.toLowerCase().includes(query)).sort((a,b) => b.year-a.year || a.title.localeCompare(b.title,'sv'));
-    $('count').textContent = songs.length;
-    $('songList').innerHTML = visible.length ? visible.map(s => `<div class="song"><div><strong>${escapeHtml(s.title)}</strong><div class="meta">${escapeHtml(s.artist)} · ${s.year} · ${label(s.category)}</div></div><div class="actions"><button class="secondary" onclick="editSong('${s.id}')">Redigera</button><button class="danger" onclick="deleteSong('${s.id}')">Ta bort</button></div></div>`).join('') : '<div class="empty">Inga egna låtar ännu.</div>';
-  }
-  const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const label = (c) => ({pop:'Pop',swedish:'Svenska',rap:'Rap',rock:'Rock'}[c] || c);
-
-  function showPanel(panel) {
-    const bulk = panel === 'bulk';
-    $('singlePanel').classList.toggle('hidden', bulk);
-    $('bulkPanel').classList.toggle('hidden', !bulk);
-    $('singleTab').classList.toggle('active', !bulk);
-    $('bulkTab').classList.toggle('active', bulk);
-  }
-
-  window.editSong = (id) => { const s=songs.find(x=>x.id===id); if(!s)return; showPanel('single'); $('editingId').value=s.id; $('title').value=s.title; $('artist').value=s.artist; $('year').value=s.year; $('category').value=s.category; $('formTitle').textContent='Redigera låt'; $('cancelEdit').classList.remove('hidden'); scrollTo({top:0,behavior:'smooth'}); };
-  window.deleteSong = (id) => { if(!confirm('Ta bort låten?'))return; songs=songs.filter(s=>s.id!==id); writeSongs(songs); render(); setStatus('Låten är borttagen.','success'); };
-  function resetForm(){ $('songForm').reset(); $('editingId').value=''; $('formTitle').textContent='Lägg till låt'; $('cancelEdit').classList.add('hidden'); }
-
-  $('songForm').addEventListener('submit', e => { e.preventDefault(); const item=normalize({id:$('editingId').value,title:$('title').value,artist:$('artist').value,year:$('year').value,category:$('category').value}); if(!item.title||!item.artist||item.year<1900||item.year>2100){setStatus('Kontrollera låt, artist och år.','error');return;} const duplicate=songs.find(s=>s.id!==item.id&&s.title.toLowerCase()===item.title.toLowerCase()&&s.artist.toLowerCase()===item.artist.toLowerCase()); if(duplicate&&!confirm('Låten finns redan. Spara ändå?'))return; const index=songs.findIndex(s=>s.id===item.id); if(index>=0)songs[index]=item; else songs.push(item); writeSongs(songs); resetForm(); render(); setStatus('Sparat! Låten finns nu bland dina egna låtar.','success'); });
-
-  $('bulkSave').onclick = () => {
-    const text = $('bulkSongs').value.trim();
-    if (!text) { setStatus('Klistra först in minst en låt.','error'); return; }
-    const lines = text.split(/\r?\n/).map((line,index)=>({line:line.trim(),number:index+1})).filter(x=>x.line);
-    const valid = [];
-    const errors = [];
-    const defaultCategory = $('bulkCategory').value;
-
-    for (const row of lines) {
-      const parts = row.line.split('|').map(x=>x.trim());
-      if (parts.length < 3 || parts.length > 4) { errors.push(`Rad ${row.number}: använd Titel | Artist | År | kategori`); continue; }
-      const [title, artist, yearText, categoryText] = parts;
-      const year = Number(yearText);
-      const categoryKey = String(categoryText || defaultCategory).toLowerCase();
-      const category = CATEGORY_ALIASES[categoryKey];
-      if (!title || !artist) { errors.push(`Rad ${row.number}: titel eller artist saknas.`); continue; }
-      if (!Number.isInteger(year) || year < 1900 || year > 2100) { errors.push(`Rad ${row.number}: ogiltigt år "${yearText}".`); continue; }
-      if (!category || !VALID_CATEGORIES.includes(category)) { errors.push(`Rad ${row.number}: okänd kategori "${categoryText}".`); continue; }
-      valid.push(normalize({title,artist,year,category}));
-    }
-
-    if (errors.length) {
-      setStatus(`Inga låtar sparades. Rätta följande:\n${errors.slice(0,20).join('\n')}${errors.length>20?`\n…och ${errors.length-20} fel till.`:''}`,'error');
-      return;
-    }
-
-    let added = 0;
-    let skipped = 0;
-    const existing = new Set(songs.map(s=>`${s.title.toLowerCase()}|${s.artist.toLowerCase()}`));
-    for (const item of valid) {
-      const key = `${item.title.toLowerCase()}|${item.artist.toLowerCase()}`;
-      if (existing.has(key)) { skipped++; continue; }
-      songs.push(item); existing.add(key); added++;
-    }
-    writeSongs(songs); render();
-    $('bulkSongs').value = '';
-    setStatus(`${added} låtar sparades.${skipped ? ` ${skipped} dubletter hoppades över.` : ''}`,'success');
-  };
-
-  $('singleTab').onclick=()=>showPanel('single');
-  $('bulkTab').onclick=()=>showPanel('bulk');
-  $('cancelEdit').onclick=resetForm; $('search').oninput=render; $('loginButton').onclick=login; $('pin').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
-  $('exportButton').onclick=()=>{ const blob=new Blob([JSON.stringify(songs,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='beatline-egna-latar.json'; a.click(); URL.revokeObjectURL(url); };
-  $('importInput').onchange=async(e)=>{ const file=e.target.files?.[0]; if(!file)return; try{ const parsed=JSON.parse(await file.text()); if(!Array.isArray(parsed))throw new Error(); const incoming=parsed.map(normalize).filter(s=>s.title&&s.artist&&s.year>=1900&&s.year<=2100); const map=new Map(songs.map(s=>[`${s.title.toLowerCase()}|${s.artist.toLowerCase()}`,s])); incoming.forEach(s=>map.set(`${s.title.toLowerCase()}|${s.artist.toLowerCase()}`,s)); songs=[...map.values()]; writeSongs(songs); render(); setStatus(`Importerade ${incoming.length} låtar.`,'success'); }catch{setStatus('Filen kunde inte importeras.','error');} e.target.value=''; };
-  $('changePin').onclick=()=>{ if(confirm('Vill du välja en ny PIN nästa gång?')){localStorage.removeItem(PIN_KEY);sessionStorage.removeItem('beatline-admin-open');location.reload();} };
-  $('clearButton').onclick=()=>{ if(confirm('Radera alla egna låtar på den här enheten?')){songs=[];writeSongs(songs);render();setStatus('Alla egna låtar är raderade.','success');} };
-  if(sessionStorage.getItem('beatline-admin-open')==='1'){ $('login').classList.add('hidden'); $('admin').classList.remove('hidden'); render(); }
-</script>
-</body>
-</html>
+const OWNER='Manngez', REPO='Beatline', PATH='src/data/songs.ts';
+const $=id=>document.getElementById(id);
+const aliases={pop:'pop',rock:'rock',rap:'rap',hiphop:'rap','hip-hop':'rap',swedish:'swedish',svensk:'swedish',svenska:'swedish'};
+const arrays={pop:'EXTRA_POP',rock:'EXTRA_ROCK',rap:'EXTRA_RAP',swedish:'EXTRA_SWEDISH'};
+const saved=sessionStorage.getItem('beatline-github-token'); if(saved)$('token').value=saved;
+$('remember').onclick=()=>{const t=$('token').value.trim();if(!t)return setStatus('Ange en token först.','error');sessionStorage.setItem('beatline-github-token',t);setStatus('Token behålls tills du stänger fliken.','ok')};
+function setStatus(text,type=''){ $('status').textContent=text; $('status').className=`status ${type}`.trim(); }
+function parseRows(){
+  const fallback=$('defaultCategory').value; const errors=[]; const rows=[];
+  $('songs').value.split(/\r?\n/).forEach((line,index)=>{
+    if(!line.trim())return;
+    const parts=line.split('|').map(v=>v.trim());
+    if(parts.length<3){errors.push(`Rad ${index+1}: för få kolumner`);return;}
+    const [title,artist,yearText,categoryText]=parts; const year=Number(yearText); const category=aliases[(categoryText||fallback).toLowerCase()];
+    if(!title||!artist){errors.push(`Rad ${index+1}: titel eller artist saknas`);return;}
+    if(!Number.isInteger(year)||year<1900||year>2100){errors.push(`Rad ${index+1}: ogiltigt årtal`);return;}
+    if(!category){errors.push(`Rad ${index+1}: ogiltig kategori`);return;}
+    rows.push({title,artist,year,category});
+  });
+  return {rows,errors};
+}
+function decodeBase64(value){const bytes=Uint8Array.from(atob(value.replace(/\n/g,'')),c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
+function encodeBase64(value){const bytes=new TextEncoder().encode(value);let binary='';for(const b of bytes)binary+=String.fromCharCode(b);return btoa(binary)}
+function tsString(value){return JSON.stringify(value).replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')}
+function insertIntoArray(source,arrayName,newRows){
+  const start=`const ${arrayName}: Raw[] = [`; const startIndex=source.indexOf(start);
+  if(startIndex<0)throw new Error(`Kunde inte hitta ${arrayName}`);
+  const closeIndex=source.indexOf('\n];',startIndex);
+  if(closeIndex<0)throw new Error(`Kunde inte hitta slutet på ${arrayName}`);
+  const lines=newRows.map(r=>`  [${tsString(r.title)}, ${tsString(r.artist)}, ${r.year}],`).join('\n');
+  return source.slice(0,closeIndex)+'\n'+lines+source.slice(closeIndex);
+}
+async function github(url,options={}){
+  const token=$('token').value.trim(); if(!token)throw new Error('GitHub-token saknas.');
+  const response=await fetch(url,{...options,headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token}`,'X-GitHub-Api-Version':'2022-11-28',...(options.headers||{})}});
+  const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.message||`GitHub-fel ${response.status}`); return data;
+}
+$('save').onclick=async()=>{
+  const {rows,errors}=parseRows(); if(errors.length)return setStatus(errors.join('\n'),'error'); if(!rows.length)return setStatus('Klistra in minst en låt.','error');
+  $('save').disabled=true; setStatus(`Kontrollerar ${rows.length} låtar mot GitHub…`);
+  try{
+    const branch=$('branch').value.trim()||'main'; const api=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}?ref=${encodeURIComponent(branch)}`;
+    const file=await github(api); let source=decodeBase64(file.content);
+    const existing=new Set(); const regex=/\[\s*["'](.+?)["']\s*,\s*["'](.+?)["']\s*,\s*(\d{4})\s*\]/g; let match;
+    while((match=regex.exec(source)))existing.add(`${match[1].toLowerCase()}|${match[2].toLowerCase()}`);
+    const unique=[]; const skipped=[];
+    for(const row of rows){const key=`${row.title.toLowerCase()}|${row.artist.toLowerCase()}`;if(existing.has(key)){skipped.push(`${row.title} – ${row.artist}`);continue;}existing.add(key);unique.push(row)}
+    if(!unique.length)return setStatus(`Alla ${rows.length} låtar finns redan i koden.`,'error');
+    for(const category of Object.keys(arrays)){const group=unique.filter(r=>r.category===category);if(group.length)source=insertIntoArray(source,arrays[category],group)}
+    const result=await github(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:$('message').value.trim()||'feat: add songs from Beatline admin',content:encodeBase64(source),sha:file.sha,branch})});
+    $('songs').value='';
+    setStatus(`Klart! ${unique.length} låtar skrevs permanent in i GitHub.\nCommit: ${result.commit.sha}${skipped.length?`\n${skipped.length} dubletter hoppades över.`:''}`,'ok');
+  }catch(error){setStatus(`Kunde inte skriva till GitHub:\n${error.message}`,'error')}
+  finally{$('save').disabled=false}
+};
+</script></body></html>
