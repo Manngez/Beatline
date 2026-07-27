@@ -1,0 +1,72 @@
+name: Install R&B category
+
+on:
+  push:
+    paths:
+      - .github/workflows/install-rnb-category.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Connect R&B catalog
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/data/songs.ts')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  'import { SWEDISH } from "./catalogSwedish";',
+                  'import { SWEDISH } from "./catalogSwedish";\nimport { RNB } from "./catalogRnb";'
+              ),
+              (
+                  '''const swedishSongs = dedupe([\n  ...build("swedish", SWEDISH, 1),\n  ...build("swedish", EXTRA_SWEDISH, 10000),\n]);''',
+                  '''const swedishSongs = dedupe([\n  ...build("swedish", SWEDISH, 1),\n  ...build("swedish", EXTRA_SWEDISH, 10000),\n]);\n\nconst rnbSongs = dedupe([\n  ...build("rnb", RNB, 1),\n]);'''
+              ),
+              (
+                  '''  rap: rapSongs,\n  swedish: swedishSongs,\n};''',
+                  '''  rap: rapSongs,\n  swedish: swedishSongs,\n  rnb: rnbSongs,\n};'''
+              ),
+              (
+                  '''  ...rapSongs,\n  ...swedishSongs,\n]);''',
+                  '''  ...rapSongs,\n  ...swedishSongs,\n  ...rnbSongs,\n]);'''
+              ),
+              (
+                  '''    rap: rapSongs.length,\n    swedish: swedishSongs.length,\n  };''',
+                  '''    rap: rapSongs.length,\n    swedish: swedishSongs.length,\n    rnb: rnbSongs.length,\n  };'''
+              ),
+          ]
+
+          for old, new in replacements:
+              if new in text:
+                  continue
+              if old not in text:
+                  raise SystemExit(f'Expected block not found:\n{old}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Test and build
+        run: |
+          npm ci
+          npm test -- --run
+          npm run build
+
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/songs.ts
+          git diff --cached --quiet || git commit -m "feat: integrate 200-song R&B category"
+          git push origin HEAD:main
