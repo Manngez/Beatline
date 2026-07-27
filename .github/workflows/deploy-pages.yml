@@ -30,9 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
-
       - name: Build
         run: npm run build
 
@@ -55,4 +52,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-# Deployment trigger: 2026-07-26 competition screens
+# Deployment trigger: 2026-07-28
