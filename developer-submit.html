@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#05050a" />
+  <title>BeatLine – utvecklarformulär</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #32126c 0, #090912 45%, #05050a 100%); color: #fff; }
+    main { width: min(720px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0; }
+    .card { border: 1px solid rgba(255,255,255,.12); border-radius: 28px; padding: 24px; background: rgba(10,10,20,.78); box-shadow: 0 30px 80px rgba(0,0,0,.35); backdrop-filter: blur(18px); }
+    h1 { margin: 0 0 8px; font-size: clamp(2rem, 7vw, 3.4rem); }
+    p { color: rgba(255,255,255,.65); line-height: 1.55; }
+    label { display: block; margin-top: 18px; font-weight: 750; }
+    input, textarea, select { width: 100%; margin-top: 8px; border: 1px solid rgba(255,255,255,.16); border-radius: 14px; background: rgba(0,0,0,.28); color: #fff; padding: 13px 14px; font: inherit; }
+    textarea { min-height: 150px; resize: vertical; }
+    button { width: 100%; margin-top: 22px; border: 0; border-radius: 16px; padding: 15px; background: linear-gradient(90deg,#7c3aed,#d946ef); color: white; font: 800 1rem system-ui; cursor: pointer; }
+    button:disabled { opacity: .45; cursor: wait; }
+    .note, #status { margin-top: 16px; border-radius: 14px; padding: 12px 14px; background: rgba(255,255,255,.06); }
+    .ok { color: #a7f3d0; }
+    .error { color: #fecaca; }
+    code { word-break: break-word; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <div style="font-size:.78rem;font-weight:800;letter-spacing:.22em;color:#c4b5fd">BEATLINE</div>
+    <h1>Skicka innehåll till repot</h1>
+    <p>Formuläret startar ett GitHub Action-flöde. Flödet lägger posten i <code>data/form-submissions.json</code> och gör en commit.</p>
+
+    <form id="repo-form">
+      <label for="token">GitHub-token</label>
+      <input id="token" name="token" type="password" autocomplete="off" required placeholder="github_pat_…" />
+
+      <label for="title">Rubrik</label>
+      <input id="title" name="title" maxlength="120" required placeholder="Exempel: Ny musikfråga" />
+
+      <label for="category">Kategori</label>
+      <select id="category" name="category">
+        <option value="music">Musik</option>
+        <option value="history">Historia</option>
+        <option value="category">Ny kategori</option>
+        <option value="other">Övrigt</option>
+      </select>
+
+      <label for="content">Innehåll</label>
+      <textarea id="content" name="content" maxlength="5000" required placeholder="Skriv uppgifterna som ska sparas…"></textarea>
+
+      <label for="submittedBy">Inskickat av</label>
+      <input id="submittedBy" name="submittedBy" maxlength="80" placeholder="Magnus" />
+
+      <button id="submit-button" type="submit">Skicka till GitHub</button>
+      <div id="status" aria-live="polite">Ingen post har skickats ännu.</div>
+    </form>
+
+    <div class="note"><strong>Viktigt:</strong> Token sparas inte av sidan. Använd en fine-grained token som bara har åtkomst till detta repo och behörigheten <em>Contents: Read and write</em>.</div>
+  </div>
+</main>
+<script>
+  const form = document.getElementById('repo-form');
+  const statusBox = document.getElementById('status');
+  const button = document.getElementById('submit-button');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    button.disabled = true;
+    statusBox.className = '';
+    statusBox.textContent = 'Skickar…';
+
+    const token = document.getElementById('token').value.trim();
+    const payload = {
+      title: document.getElementById('title').value.trim(),
+      category: document.getElementById('category').value,
+      content: document.getElementById('content').value.trim(),
+      submittedBy: document.getElementById('submittedBy').value.trim(),
+      submittedAt: new Date().toISOString(),
+      source: location.href
+    };
+
+    try {
+      const response = await fetch('https://api.github.com/repos/Manngez/Beatline/dispatches', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${token}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ event_type: 'add_form_submission', client_payload: payload })
+      });
+
+      if (!response.ok) {
+        const details = await response.text();
+        throw new Error(`GitHub svarade ${response.status}: ${details || response.statusText}`);
+      }
+
+      statusBox.className = 'ok';
+      statusBox.textContent = 'Klart! GitHub Action har startats. Committen brukar synas under Actions och i repots historik.';
+      form.reset();
+    } catch (error) {
+      statusBox.className = 'error';
+      statusBox.textContent = error instanceof Error ? error.message : 'Ett okänt fel inträffade.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
