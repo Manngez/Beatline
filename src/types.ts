@@ -1,4 +1,4 @@
-export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock" | "rnb";
+export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock";
 export type GameContentMode = "music" | "history";
 export type HistoryCategory = "all" | "world" | "sweden" | "science" | "culture" | "sport" | "society";
 
@@ -98,12 +98,6 @@ export const CATEGORY_META: Record<
     emoji: "🎸",
     description: "Rock, metal och alternativ från alla tider",
     color: "#a3e635",
-  },
-  rnb: {
-    label: "R&B",
-    emoji: "🎙️",
-    description: "Soul, new jack swing och modern R&B från 70-talet till idag",
-    color: "#c084fc",
   },
 };
 
