@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080612" />
+  <title>Beatline Admin</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #3b1778 0, #100a20 42%, #06050b 100%); color: #fff; }
+    main { width: min(900px, calc(100% - 24px)); margin: 0 auto; padding: 24px 0 64px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+    h1 { margin:4px 0; font-size:clamp(2rem,8vw,3.6rem); }
+    h2 { margin:0 0 14px; }
+    p { color:#c7bfd9; line-height:1.5; }
+    .eyebrow { font-size:.75rem; font-weight:900; letter-spacing:.22em; color:#c4b5fd; }
+    .card { background:rgba(13,10,25,.88); border:1px solid rgba(255,255,255,.12); border-radius:24px; padding:18px; box-shadow:0 24px 70px rgba(0,0,0,.35); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    label { display:block; font-weight:800; font-size:.9rem; }
+    input, select { width:100%; margin-top:7px; padding:13px 14px; border-radius:14px; border:1px solid rgba(255,255,255,.16); background:#0b0913; color:#fff; font:inherit; }
+    button, .button { border:0; border-radius:14px; padding:13px 16px; font:800 1rem system-ui; color:#fff; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    .primary { background:linear-gradient(90deg,#7c3aed,#d946ef); width:100%; margin-top:16px; }
+    .secondary { background:rgba(255,255,255,.09); }
+    .danger { background:rgba(239,68,68,.18); color:#fecaca; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .status { margin-top:12px; padding:11px 13px; border-radius:12px; background:rgba(255,255,255,.06); color:#d8d0e7; }
+    .song { display:grid; grid-template-columns:1fr auto; gap:12px; padding:14px 0; border-bottom:1px solid rgba(255,255,255,.08); }
+    .song:last-child { border-bottom:0; }
+    .song strong { display:block; }
+    .meta { color:#aaa0ba; font-size:.9rem; margin-top:4px; }
+    .empty { padding:20px; text-align:center; color:#aaa0ba; }
+    .count { background:#7c3aed; border-radius:999px; padding:4px 10px; font-size:.8rem; font-weight:900; }
+    .hidden { display:none !important; }
+    .login { max-width:440px; margin:12vh auto 0; }
+    @media (max-width:640px) { .grid { grid-template-columns:1fr; } header { align-items:flex-start; flex-direction:column; } .actions > * { flex:1; } }
+  </style>
+</head>
+<body>
+<main>
+  <section id="login" class="card login">
+    <div class="eyebrow">BEATLINE ADMIN</div>
+    <h1>Öppna admin</h1>
+    <p>PIN-koden skyddar sidan på den här enheten. Första gången väljer du själv en kod.</p>
+    <label>PIN-kod<input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="4–8 siffror" /></label>
+    <button id="loginButton" class="primary">Fortsätt</button>
+    <div id="loginStatus" class="status">Ingen PIN är ännu angiven på denna enhet.</div>
+  </section>
+
+  <section id="admin" class="hidden">
+    <header>
+      <div><div class="eyebrow">BEATLINE</div><h1>Låtadmin</h1><p style="margin:0">Lägg till egna låtar direkt från mobilen.</p></div>
+      <a class="button secondary" href="./">Till spelet</a>
+    </header>
+
+    <section class="card">
+      <h2 id="formTitle">Lägg till låt</h2>
+      <form id="songForm">
+        <input id="editingId" type="hidden" />
+        <div class="grid">
+          <label>Låt<input id="title" maxlength="120" required placeholder="Exempel: Dancing Queen" /></label>
+          <label>Artist<input id="artist" maxlength="120" required placeholder="Exempel: ABBA" /></label>
+          <label>År<input id="year" type="number" min="1900" max="2100" required placeholder="1976" /></label>
+          <label>Kategori<select id="category"><option value="pop">Pop</option><option value="swedish">Svenska</option><option value="rap">Rap</option><option value="rock">Rock</option></select></label>
+        </div>
+        <button class="primary" type="submit">Spara låt</button>
+        <button id="cancelEdit" class="secondary hidden" type="button" style="width:100%;margin-top:10px">Avbryt redigering</button>
+        <div id="status" class="status">Dina låtar sparas endast på den här enheten.</div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>Mina låtar</h2><span id="count" class="count">0</span></div>
+      <label>Sök<input id="search" placeholder="Sök låt eller artist" /></label>
+      <div id="songList"></div>
+    </section>
+
+    <section class="card">
+      <h2>Säkerhetskopia</h2>
+      <p>Exportera filen för att flytta låtarna till en annan telefon eller spara en kopia.</p>
+      <div class="actions">
+        <button id="exportButton" class="secondary" type="button">Exportera</button>
+        <label class="button secondary" style="cursor:pointer">Importera<input id="importInput" type="file" accept="application/json" hidden /></label>
+        <button id="changePin" class="secondary" type="button">Byt PIN</button>
+        <button id="clearButton" class="danger" type="button">Radera alla</button>
+      </div>
+    </section>
+  </section>
+</main>
+<script>
+  const SONG_KEY = 'beatline-custom-songs-v1';
+  const PIN_KEY = 'beatline-admin-pin-v1';
+  const $ = (id) => document.getElementById(id);
+  const readSongs = () => { try { const value = JSON.parse(localStorage.getItem(SONG_KEY) || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } };
+  const writeSongs = (songs) => localStorage.setItem(SONG_KEY, JSON.stringify(songs));
+  const hashPin = async (pin) => { const bytes = new TextEncoder().encode(`beatline:${pin}`); const hash = await crypto.subtle.digest('SHA-256', bytes); return Array.from(new Uint8Array(hash)).map(x => x.toString(16).padStart(2,'0')).join(''); };
+  let songs = readSongs();
+
+  async function login() {
+    const pin = $('pin').value.trim();
+    if (!/^\d{4,8}$/.test(pin)) { $('loginStatus').textContent = 'Ange 4–8 siffror.'; return; }
+    const hash = await hashPin(pin);
+    const stored = localStorage.getItem(PIN_KEY);
+    if (!stored) localStorage.setItem(PIN_KEY, hash);
+    else if (stored !== hash) { $('loginStatus').textContent = 'Fel PIN-kod.'; return; }
+    sessionStorage.setItem('beatline-admin-open', '1');
+    $('login').classList.add('hidden'); $('admin').classList.remove('hidden'); render();
+  }
+
+  function normalize(raw) {
+    const year = Number(raw.year);
+    return { id: raw.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2,8)}`, title:String(raw.title||'').trim(), artist:String(raw.artist||'').trim(), year, decade:`${Math.floor(year/10)*10}-tal`, category:['pop','swedish','rap','rock'].includes(raw.category) ? raw.category : 'pop', contentType:'music' };
+  }
+
+  function render() {
+    const query = $('search').value.trim().toLowerCase();
+    const visible = songs.filter(s => `${s.title} ${s.artist}`.toLowerCase().includes(query)).sort((a,b) => b.year-a.year || a.title.localeCompare(b.title,'sv'));
+    $('count').textContent = songs.length;
+    $('songList').innerHTML = visible.length ? visible.map(s => `<div class="song"><div><strong>${escapeHtml(s.title)}</strong><div class="meta">${escapeHtml(s.artist)} · ${s.year} · ${label(s.category)}</div></div><div class="actions"><button class="secondary" onclick="editSong('${s.id}')">Redigera</button><button class="danger" onclick="deleteSong('${s.id}')">Ta bort</button></div></div>`).join('') : '<div class="empty">Inga egna låtar ännu.</div>';
+  }
+  const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const label = (c) => ({pop:'Pop',swedish:'Svenska',rap:'Rap',rock:'Rock'}[c] || c);
+
+  window.editSong = (id) => { const s=songs.find(x=>x.id===id); if(!s)return; $('editingId').value=s.id; $('title').value=s.title; $('artist').value=s.artist; $('year').value=s.year; $('category').value=s.category; $('formTitle').textContent='Redigera låt'; $('cancelEdit').classList.remove('hidden'); scrollTo({top:0,behavior:'smooth'}); };
+  window.deleteSong = (id) => { if(!confirm('Ta bort låten?'))return; songs=songs.filter(s=>s.id!==id); writeSongs(songs); render(); $('status').textContent='Låten är borttagen.'; };
+  function resetForm(){ $('songForm').reset(); $('editingId').value=''; $('formTitle').textContent='Lägg till låt'; $('cancelEdit').classList.add('hidden'); }
+
+  $('songForm').addEventListener('submit', e => { e.preventDefault(); const item=normalize({id:$('editingId').value,title:$('title').value,artist:$('artist').value,year:$('year').value,category:$('category').value}); if(!item.title||!item.artist||item.year<1900||item.year>2100){$('status').textContent='Kontrollera låt, artist och år.';return;} const duplicate=songs.find(s=>s.id!==item.id&&s.title.toLowerCase()===item.title.toLowerCase()&&s.artist.toLowerCase()===item.artist.toLowerCase()); if(duplicate&&!confirm('Låten finns redan. Spara ändå?'))return; const index=songs.findIndex(s=>s.id===item.id); if(index>=0)songs[index]=item; else songs.push(item); writeSongs(songs); resetForm(); render(); $('status').textContent='Sparat! Låten används nu automatiskt i Beatline på den här enheten.'; });
+  $('cancelEdit').onclick=resetForm; $('search').oninput=render; $('loginButton').onclick=login; $('pin').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+  $('exportButton').onclick=()=>{ const blob=new Blob([JSON.stringify(songs,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='beatline-egna-latar.json'; a.click(); URL.revokeObjectURL(url); };
+  $('importInput').onchange=async(e)=>{ const file=e.target.files?.[0]; if(!file)return; try{ const parsed=JSON.parse(await file.text()); if(!Array.isArray(parsed))throw new Error(); const incoming=parsed.map(normalize).filter(s=>s.title&&s.artist&&s.year>=1900&&s.year<=2100); const map=new Map(songs.map(s=>[`${s.title.toLowerCase()}|${s.artist.toLowerCase()}`,s])); incoming.forEach(s=>map.set(`${s.title.toLowerCase()}|${s.artist.toLowerCase()}`,s)); songs=[...map.values()]; writeSongs(songs); render(); $('status').textContent=`Importerade ${incoming.length} låtar.`; }catch{$('status').textContent='Filen kunde inte importeras.';} e.target.value=''; };
+  $('changePin').onclick=()=>{ if(confirm('Vill du välja en ny PIN nästa gång?')){localStorage.removeItem(PIN_KEY);sessionStorage.removeItem('beatline-admin-open');location.reload();} };
+  $('clearButton').onclick=()=>{ if(confirm('Radera alla egna låtar på den här enheten?')){songs=[];writeSongs(songs);render();$('status').textContent='Alla egna låtar är raderade.';} };
+  if(sessionStorage.getItem('beatline-admin-open')==='1'){ $('login').classList.add('hidden'); $('admin').classList.remove('hidden'); render(); }
+</script>
+</body>
+</html>
