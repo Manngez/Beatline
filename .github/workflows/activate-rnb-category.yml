@@ -1,0 +1,128 @@
+name: Activate R&B category
+
+on:
+  push:
+    paths:
+      - .github/workflows/activate-rnb-category.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Activate R&B in types and song catalog
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          types_path = Path('src/types.ts')
+          types = types_path.read_text(encoding='utf-8')
+          types = types.replace(
+              'export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock";',
+              'export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock" | "rnb";'
+          )
+          marker = '''  rock: {
+            label: "Rock",
+            emoji: "🎸",
+            description: "Rock, metal och alternativ från alla tider",
+            color: "#a3e635",
+          },
+          };'''
+          replacement = '''  rock: {
+            label: "Rock",
+            emoji: "🎸",
+            description: "Rock, metal och alternativ från alla tider",
+            color: "#a3e635",
+          },
+          rnb: {
+            label: "R&B",
+            emoji: "🎙️",
+            description: "Soul och R&B från klassiker till moderna hits",
+            color: "#c084fc",
+          },
+          };'''
+          if marker not in types:
+              raise SystemExit('CATEGORY_META marker not found')
+          types_path.write_text(types.replace(marker, replacement), encoding='utf-8')
+
+          songs_path = Path('src/data/songs.ts')
+          songs = songs_path.read_text(encoding='utf-8')
+          songs = songs.replace(
+              'import { SWEDISH } from "./catalogSwedish";',
+              'import { SWEDISH } from "./catalogSwedish";\nimport { RNB } from "./catalogRnb";'
+          )
+          songs = songs.replace(
+              '''const swedishSongs = dedupe([
+            ...build("swedish", SWEDISH, 1),
+            ...build("swedish", EXTRA_SWEDISH, 10000),
+          ]);
+
+          export const SONGS_BY_CATEGORY''',
+              '''const swedishSongs = dedupe([
+            ...build("swedish", SWEDISH, 1),
+            ...build("swedish", EXTRA_SWEDISH, 10000),
+          ]);
+
+          const rnbSongs = dedupe([
+            ...build("rnb", RNB, 1),
+          ]);
+
+          export const SONGS_BY_CATEGORY'''
+          )
+          songs = songs.replace(
+              '''  rap: rapSongs,
+            swedish: swedishSongs,
+          };''',
+              '''  rap: rapSongs,
+            swedish: swedishSongs,
+            rnb: rnbSongs,
+          };'''
+          )
+          songs = songs.replace(
+              '''  ...rapSongs,
+            ...swedishSongs,
+          ]);''',
+              '''  ...rapSongs,
+            ...swedishSongs,
+            ...rnbSongs,
+          ]);'''
+          )
+          songs = songs.replace(
+              '''    rap: rapSongs.length,
+              swedish: swedishSongs.length,
+            };''',
+              '''    rap: rapSongs.length,
+              swedish: swedishSongs.length,
+              rnb: rnbSongs.length,
+            };'''
+          )
+          required = ['import { RNB }', 'const rnbSongs', 'rnb: rnbSongs', '...rnbSongs', 'rnb: rnbSongs.length']
+          missing = [item for item in required if item not in songs]
+          if missing:
+              raise SystemExit(f'Missing integrations: {missing}')
+          songs_path.write_text(songs, encoding='utf-8')
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit activation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/types.ts src/data/songs.ts
+          git commit -m "feat: activate R&B category with 200 songs"
+          git push origin HEAD:main
