@@ -24,18 +24,22 @@ jobs:
 
           types_path = Path('src/types.ts')
           types = types_path.read_text(encoding='utf-8')
-          types = types.replace(
-              'export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock";',
-              'export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock" | "rnb";'
-          )
-          marker = '''  rock: {
+          old_type = 'export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock";'
+          new_type = 'export type SongCategory = "mixed" | "pop" | "swedish" | "rap" | "rock" | "rnb";'
+          if old_type in types:
+              types = types.replace(old_type, new_type)
+          elif new_type not in types:
+              raise SystemExit('SongCategory declaration not found')
+
+          if '  rnb: {' not in types:
+              marker = '''  rock: {
             label: "Rock",
             emoji: "🎸",
             description: "Rock, metal och alternativ från alla tider",
             color: "#a3e635",
           },
           };'''
-          replacement = '''  rock: {
+              replacement = '''  rock: {
             label: "Rock",
             emoji: "🎸",
             description: "Rock, metal och alternativ från alla tider",
@@ -48,24 +52,29 @@ jobs:
             color: "#c084fc",
           },
           };'''
-          if marker not in types:
-              raise SystemExit('CATEGORY_META marker not found')
-          types_path.write_text(types.replace(marker, replacement), encoding='utf-8')
+              # The closing brace in the source is not indented.
+              marker = marker.replace('\n          };', '\n};')
+              replacement = replacement.replace('\n          };', '\n};')
+              if marker not in types:
+                  raise SystemExit('CATEGORY_META marker not found')
+              types = types.replace(marker, replacement)
+          types_path.write_text(types, encoding='utf-8')
 
           songs_path = Path('src/data/songs.ts')
           songs = songs_path.read_text(encoding='utf-8')
-          songs = songs.replace(
-              'import { SWEDISH } from "./catalogSwedish";',
-              'import { SWEDISH } from "./catalogSwedish";\nimport { RNB } from "./catalogRnb";'
-          )
-          songs = songs.replace(
-              '''const swedishSongs = dedupe([
+          if 'import { RNB } from "./catalogRnb";' not in songs:
+              songs = songs.replace(
+                  'import { SWEDISH } from "./catalogSwedish";',
+                  'import { SWEDISH } from "./catalogSwedish";\nimport { RNB } from "./catalogRnb";'
+              )
+          if 'const rnbSongs = dedupe([' not in songs:
+              marker = '''const swedishSongs = dedupe([
             ...build("swedish", SWEDISH, 1),
             ...build("swedish", EXTRA_SWEDISH, 10000),
           ]);
 
-          export const SONGS_BY_CATEGORY''',
-              '''const swedishSongs = dedupe([
+          export const SONGS_BY_CATEGORY'''
+              replacement = '''const swedishSongs = dedupe([
             ...build("swedish", SWEDISH, 1),
             ...build("swedish", EXTRA_SWEDISH, 10000),
           ]);
@@ -75,35 +84,34 @@ jobs:
           ]);
 
           export const SONGS_BY_CATEGORY'''
-          )
-          songs = songs.replace(
-              '''  rap: rapSongs,
-            swedish: swedishSongs,
-          };''',
-              '''  rap: rapSongs,
-            swedish: swedishSongs,
-            rnb: rnbSongs,
-          };'''
-          )
-          songs = songs.replace(
-              '''  ...rapSongs,
-            ...swedishSongs,
-          ]);''',
-              '''  ...rapSongs,
-            ...swedishSongs,
-            ...rnbSongs,
-          ]);'''
-          )
-          songs = songs.replace(
-              '''    rap: rapSongs.length,
-              swedish: swedishSongs.length,
-            };''',
-              '''    rap: rapSongs.length,
-              swedish: swedishSongs.length,
-              rnb: rnbSongs.length,
-            };'''
-          )
-          required = ['import { RNB }', 'const rnbSongs', 'rnb: rnbSongs', '...rnbSongs', 'rnb: rnbSongs.length']
+              marker = '\n'.join(line[10:] if line.startswith('          ') else line for line in marker.split('\n'))
+              replacement = '\n'.join(line[10:] if line.startswith('          ') else line for line in replacement.split('\n'))
+              if marker not in songs:
+                  raise SystemExit('swedishSongs marker not found')
+              songs = songs.replace(marker, replacement)
+          if '  rnb: rnbSongs,' not in songs:
+              songs = songs.replace(
+                  '  rap: rapSongs,\n  swedish: swedishSongs,\n};',
+                  '  rap: rapSongs,\n  swedish: swedishSongs,\n  rnb: rnbSongs,\n};'
+              )
+          if '  ...rnbSongs,' not in songs:
+              songs = songs.replace(
+                  '  ...rapSongs,\n  ...swedishSongs,\n]);',
+                  '  ...rapSongs,\n  ...swedishSongs,\n  ...rnbSongs,\n]);'
+              )
+          if '    rnb: rnbSongs.length,' not in songs:
+              songs = songs.replace(
+                  '    rap: rapSongs.length,\n    swedish: swedishSongs.length,\n  };',
+                  '    rap: rapSongs.length,\n    swedish: swedishSongs.length,\n    rnb: rnbSongs.length,\n  };'
+              )
+
+          required = [
+              'import { RNB } from "./catalogRnb";',
+              'const rnbSongs = dedupe([',
+              '  rnb: rnbSongs,',
+              '  ...rnbSongs,',
+              '    rnb: rnbSongs.length,',
+          ]
           missing = [item for item in required if item not in songs]
           if missing:
               raise SystemExit(f'Missing integrations: {missing}')
@@ -124,7 +132,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/types.ts src/data/songs.ts
-          git commit -m "feat: activate R&B category with 200 songs"
-          git push origin HEAD:main
-
-# retrigger 2026-07-28
+          if git diff --cached --quiet; then
+            echo "R&B is already active"
+          else
+            git commit -m "feat: activate R&B category with 200 songs"
+            git push origin HEAD:main
+          fi
