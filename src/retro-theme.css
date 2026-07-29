@@ -1,0 +1,151 @@
+/* Beatline vinyl-retro theme. Presentation only: gameplay and fetched artwork remain unchanged. */
+:root {
+  --retro-ink: #2b1a13;
+  --retro-paper: #ead5ad;
+  --retro-paper-deep: #c8a36b;
+  --retro-wood: #3b2117;
+  --retro-brass: #c9933f;
+  --retro-brass-light: #f1cf79;
+  --retro-red: #8f2f26;
+}
+
+body {
+  color: #fff7e5;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 220, 145, 0.08), transparent 24%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 7px),
+    linear-gradient(135deg, #21120d 0%, #4a2a1b 48%, #26140e 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: .32;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 9px, rgba(0,0,0,.06) 9px 10px),
+    radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.38));
+}
+
+.brand-text {
+  background: linear-gradient(180deg, #fff1b6 0%, #d8a54f 52%, #8c5428 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-glow { text-shadow: 0 2px 0 #442317, 0 0 22px rgba(235, 190, 94, .22); }
+
+main header,
+main section,
+.glass-panel {
+  border-color: rgba(225, 184, 105, .35) !important;
+  background:
+    linear-gradient(155deg, rgba(84, 49, 30, .96), rgba(39, 22, 16, .96)) !important;
+  box-shadow:
+    0 18px 35px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 233, 184, .15),
+    inset 0 0 0 2px rgba(92, 49, 26, .45) !important;
+  backdrop-filter: none !important;
+}
+
+main header { border-radius: 18px !important; }
+main section { border-radius: 18px !important; }
+
+main button {
+  border-color: rgba(232, 197, 124, .42) !important;
+  background: linear-gradient(180deg, #74472a, #3b2117) !important;
+  color: #fff2cc !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 5px 12px rgba(0,0,0,.28) !important;
+  text-shadow: 0 1px 0 #24120c;
+}
+
+main button:not(:disabled):active { transform: translateY(1px); }
+main button:disabled { opacity: .42 !important; }
+
+main img {
+  border-radius: 7px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.42), 0 0 0 4px #e5cfaa, 0 0 0 6px #6f4329;
+}
+
+main [class*="bg-fuchsia"],
+main [class*="bg-violet"],
+main [class*="bg-pink"] {
+  background-color: rgba(154, 96, 42, .22) !important;
+}
+
+main [class*="text-fuchsia"],
+main [class*="text-violet"],
+main [class*="text-pink"] {
+  color: #f1cf79 !important;
+}
+
+main [class*="border-fuchsia"],
+main [class*="border-violet"],
+main [class*="border-pink"] {
+  border-color: rgba(220, 170, 79, .48) !important;
+}
+
+main [class*="from-violet"],
+main [class*="from-fuchsia"],
+main [class*="from-pink"] {
+  background-image: linear-gradient(180deg, #b57a38, #6d3c22) !important;
+}
+
+/* Timeline cards become physical record sleeves while their fetched artwork stays visible. */
+main [class*="overflow-x-auto"] { scrollbar-color: #b77b3a rgba(44, 23, 15, .5); }
+main [class*="rounded-2xl"] { border-radius: 12px; }
+
+.beatline-start-overlay {
+  background:
+    radial-gradient(circle at 50% 14%, rgba(221, 169, 76, .18), transparent 34%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.015) 0 1px, transparent 1px 8px),
+    linear-gradient(145deg, #21120d, #4c2b1c 48%, #1f110c) !important;
+}
+
+.start-ambient { display: none; }
+.start-wave span {
+  background: linear-gradient(180deg, #f0d27b, #ba7c37 50%, #7b3f24) !important;
+  box-shadow: 0 0 10px rgba(218, 167, 72, .38) !important;
+}
+
+.start-header h1 {
+  background: linear-gradient(180deg, #fff1b7, #d49b44 55%, #7f4626) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  text-shadow: 0 2px 0 rgba(48, 23, 13, .45) !important;
+}
+
+.start-card {
+  color: #d8a250 !important;
+  border-color: #b98242 !important;
+  background:
+    linear-gradient(150deg, rgba(95, 57, 34, .98), rgba(42, 24, 17, .99)) !important;
+  box-shadow: 0 14px 28px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,237,193,.12) !important;
+}
+
+.start-card::after {
+  content: "";
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  opacity: .16;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle, #d9a04d 0 2px, #20110c 2px 7px);
+}
+
+.start-pill,
+.start-arrow { border-color: #d7a14d !important; }
+.start-footer b { color: #e0ad55 !important; text-shadow: none !important; }
+.start-footer p { color: #d1b17b !important; }
+
+@media (max-width: 430px) {
+  .start-card::after { width: 76px; height: 76px; left: 10px; }
+}
