@@ -10,6 +10,25 @@ import { cn } from "../utils/cn";
 
 export type AudioStatus = "loading" | "ready" | "error" | "idle";
 
+let remoteAudioElement: HTMLAudioElement | null = null;
+
+/** Call from a participant gesture so mobile browsers permit later remote playback. */
+export async function primeRemoteAudioPlayback() {
+  if (typeof Audio === "undefined") return;
+  remoteAudioElement ??= new Audio();
+  remoteAudioElement.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+  remoteAudioElement.muted = true;
+  try {
+    await remoteAudioElement.play();
+    remoteAudioElement.pause();
+    remoteAudioElement.currentTime = 0;
+  } catch {
+    // The later explicit command still gets a chance on less restrictive browsers.
+  } finally {
+    remoteAudioElement.muted = false;
+  }
+}
+
 interface MusicPlayerProps {
   song: Song | null;
   /** Always manual via play button unless explicitly enabled */
@@ -20,6 +39,9 @@ interface MusicPlayerProps {
   onRequestNewCard?: () => void;
   canRequestNewCard?: boolean;
   showExternalLinks?: boolean;
+  /** Incremented by a remote command to start this preview without visible UI. */
+  playRequest?: number;
+  headless?: boolean;
 }
 
 export function MusicPlayer({
@@ -31,6 +53,8 @@ export function MusicPlayer({
   onRequestNewCard,
   canRequestNewCard = true,
   showExternalLinks = true,
+  playRequest,
+  headless = false,
 }: MusicPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -91,7 +115,8 @@ export function MusicPlayer({
     stopAudio();
     if (!preview?.url || !active || !playLocal) return;
 
-    const audio = new Audio(preview.url);
+    const audio = headless ? (remoteAudioElement ??= new Audio()) : new Audio();
+    audio.src = preview.url;
     audioRef.current = audio;
     audio.preload = "auto";
     audio.volume = 0.9;
@@ -128,7 +153,7 @@ export function MusicPlayer({
       audio.removeEventListener("error", onError);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preview?.url, active, playLocal, autoPlay]);
+  }, [preview?.url, active, playLocal, autoPlay, headless]);
 
   const toggle = async () => {
     if (!playLocal) return;
@@ -165,7 +190,22 @@ export function MusicPlayer({
     }
   };
 
+  useEffect(() => {
+    if (playRequest === undefined || !preview?.url || !active || !playLocal) return;
+    let audio = headless ? (remoteAudioElement ?? audioRef.current) : audioRef.current;
+    if (!audio) {
+      audio = new Audio(preview.url);
+      if (headless) remoteAudioElement = audio;
+      audioRef.current = audio;
+      audio.volume = 0.9;
+    }
+    if (audio.src !== preview.url) audio.src = preview.url;
+    audio.currentTime = 0;
+    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }, [active, headless, playLocal, playRequest, preview?.url]);
+
   if (!song || !active) return null;
+  if (headless) return null;
 
   const sourceLabel =
     preview?.source === "deezer"
