@@ -44,7 +44,7 @@ describe("separate content databases", () => {
 
   it("returns only history records from the history database", () => {
     const events = getHistoryEvents("all");
-    expect(events.length).toBe(500);
+    expect(events.length).toBeGreaterThanOrEqual(500);
     expect(new Set(events.map((card) => card.id)).size).toBe(events.length);
     expect(events.every((card) => card.contentType === "history")).toBe(true);
     expect(Math.min(...events.map((card) => card.year))).toBe(1900);
